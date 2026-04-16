@@ -1,0 +1,1083 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portal Operasional Blasting - DPMA IPB</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Poppins:wght@500;600;700&display=swap" rel="stylesheet">
+    
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+    
+    <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+    <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
+
+    <style>
+        :root {
+            /* Palette Resmi IPB University */
+            --ipb-blue: #003366;
+            --ipb-blue-light: #004d99;
+            --ipb-yellow: #fec315;
+            --ipb-yellow-hover: #e0ac12;
+            --bg-body: #f4f7f6;
+            --surface: #ffffff;
+            --text-dark: #1e293b;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+            --sidebar-width: 280px;
+            --success: #2ecc71;
+            --error: #e74c3c;
+            --shadow-sm: 0 2px 4px rgba(0,0,0,0.05);
+            --shadow-md: 0 10px 20px rgba(0, 51, 102, 0.05);
+        }
+
+        * { 
+            margin: 0; 
+            padding: 0; 
+            box-sizing: border-box; 
+            font-family: 'Inter', Tahoma, Geneva, Verdana, sans-serif; 
+        }
+
+        h1, h2, h3, h4, h5, h6, .nav-item {
+            font-family: 'Poppins', sans-serif;
+        }
+
+        body { 
+            background-color: var(--bg-body); 
+            color: var(--text-dark); 
+            display: flex; 
+            min-height: 100vh; 
+            overflow-x: hidden; 
+        }
+
+        /* ----------------------------------
+           SIDEBAR STYLING & ANIMATION
+           ---------------------------------- */
+        .sidebar { 
+            width: var(--sidebar-width); 
+            background-color: var(--surface); 
+            border-right: 1px solid var(--border); 
+            display: flex; 
+            flex-direction: column; 
+            position: fixed; 
+            height: 100%; 
+            z-index: 1000; 
+            transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            box-shadow: 2px 0 15px rgba(0,0,0,0.03);
+        }
+
+        .sidebar-header { 
+            padding: 30px 24px; 
+            border-bottom: 1px solid var(--border); 
+            text-align: center; 
+            background: linear-gradient(to bottom, #ffffff, #fcfdfd);
+        }
+        
+        .sidebar-header img { 
+            max-width: 85%; 
+            height: auto; 
+            transition: transform 0.3s ease;
+        }
+        .sidebar-header img:hover {
+            transform: scale(1.05);
+        }
+
+        .nav-links { 
+            padding: 20px 0; 
+            flex-grow: 1; 
+            overflow-y: auto;
+        }
+
+        .nav-item { 
+            padding: 16px 24px; 
+            display: flex; 
+            align-items: center; 
+            color: var(--text-muted); 
+            text-decoration: none; 
+            font-weight: 500; 
+            transition: all 0.3s ease; 
+            border-left: 4px solid transparent; 
+            cursor: pointer; 
+            margin: 4px 12px;
+            border-radius: 8px;
+        }
+
+        .nav-item:hover {
+            background-color: rgba(0, 51, 102, 0.04);
+            color: var(--ipb-blue);
+            transform: translateX(4px);
+        }
+
+        .nav-item.active { 
+            background-color: rgba(254, 195, 21, 0.15); 
+            color: var(--ipb-blue); 
+            border-left: 4px solid var(--ipb-yellow); 
+            font-weight: 600;
+        }
+
+        .nav-item i { 
+            margin-right: 14px; 
+            font-size: 1.3rem; 
+            width: 24px; 
+            text-align: center; 
+            color: var(--ipb-blue);
+        }
+
+        .sidebar-footer { 
+            padding: 24px; 
+            border-top: 1px solid var(--border); 
+            background: #fafbfc;
+        }
+
+        .btn-outline { 
+            width: 100%; 
+            padding: 14px; 
+            background: transparent; 
+            border: 2px solid #e2e8f0; 
+            color: var(--text-dark); 
+            border-radius: 10px; 
+            font-weight: 600; 
+            cursor: pointer; 
+            transition: all 0.3s ease; 
+            font-family: 'Poppins', sans-serif;
+        }
+
+        .btn-outline:hover { 
+            border-color: var(--error); 
+            color: white; 
+            background-color: var(--error);
+            box-shadow: 0 4px 10px rgba(231, 76, 60, 0.2);
+        }
+
+        /* Overlay for Mobile Sidebar */
+        .mobile-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 51, 102, 0.5);
+            z-index: 999;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            backdrop-filter: blur(3px);
+        }
+
+        /* ----------------------------------
+           MAIN CONTENT & HEADER
+           ---------------------------------- */
+        .main-content { 
+            margin-left: var(--sidebar-width); 
+            flex-grow: 1; 
+            padding: 40px; 
+            max-width: calc(100% - var(--sidebar-width)); 
+            position: relative; 
+            min-height: 100vh;
+        }
+
+        .top-header { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            margin-bottom: 40px; 
+            background: var(--surface);
+            padding: 20px 30px;
+            border-radius: 16px;
+            box-shadow: var(--shadow-sm);
+            animation: slideDown 0.5s ease backwards;
+        }
+
+        .header-title-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .mobile-menu-btn {
+            display: none;
+            background: none;
+            border: none;
+            font-size: 1.8rem;
+            color: var(--ipb-blue);
+            cursor: pointer;
+            padding: 5px;
+        }
+
+        .top-header h1 { 
+            font-size: 1.6rem; 
+            color: var(--ipb-blue); 
+            line-height: 1.2;
+        }
+
+        .top-header p {
+            color: var(--text-muted); 
+            margin-top: 4px;
+            font-size: 0.9rem;
+        }
+
+        .user-profile { 
+            display: flex; 
+            align-items: center; 
+            gap: 15px; 
+            padding-left: 20px;
+            border-left: 1px solid var(--border);
+        }
+
+        .avatar { 
+            width: 45px; 
+            height: 45px; 
+            background: linear-gradient(135deg, var(--ipb-blue), var(--ipb-blue-light));
+            color: var(--ipb-yellow); 
+            border-radius: 50%; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            font-weight: 700; 
+            font-size: 1.2rem;
+            box-shadow: 0 4px 10px rgba(0, 51, 102, 0.2);
+            font-family: 'Poppins', sans-serif;
+        }
+
+        /* ----------------------------------
+           SPA VIEWS & ANIMATIONS
+           ---------------------------------- */
+        .view-section { 
+            display: none; 
+        }
+
+        .view-section.active { 
+            display: block; 
+            animation: fadeInView 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        @keyframes fadeInView { 
+            from { opacity: 0; transform: translateY(20px); } 
+            to { opacity: 1; transform: translateY(0); } 
+        }
+
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ----------------------------------
+           DASHBOARD STATS
+           ---------------------------------- */
+        .stats-grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); 
+            gap: 24px; 
+            margin-bottom: 30px; 
+        }
+
+        .stat-card { 
+            background: var(--surface); 
+            padding: 30px 24px; 
+            border-radius: 16px; 
+            box-shadow: var(--shadow-md); 
+            border: 1px solid rgba(0,0,0,0.02); 
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Dekorasi Sudut Kartu ala IPB */
+        .stat-card::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 60px;
+            height: 60px;
+            background: var(--ipb-blue);
+            opacity: 0.03;
+            border-radius: 0 0 0 60px;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 30px rgba(0, 51, 102, 0.08);
+        }
+
+        .stat-card h3 { 
+            color: var(--text-muted); 
+            font-size: 0.95rem; 
+            margin-bottom: 12px; 
+            font-weight: 500; 
+        }
+
+        .stat-card .value { 
+            font-size: 2.2rem; 
+            font-weight: 700; 
+            color: var(--ipb-blue); 
+            font-family: 'Poppins', sans-serif;
+        }
+
+        /* Animasi berurutan untuk stat cards */
+        .view-section.active .stat-card:nth-child(1) { animation: slideUpFade 0.5s 0.1s cubic-bezier(0.16, 1, 0.3, 1) both; }
+        .view-section.active .stat-card:nth-child(2) { animation: slideUpFade 0.5s 0.2s cubic-bezier(0.16, 1, 0.3, 1) both; }
+        .view-section.active .stat-card:nth-child(3) { animation: slideUpFade 0.5s 0.3s cubic-bezier(0.16, 1, 0.3, 1) both; }
+
+        @keyframes slideUpFade {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ----------------------------------
+           FORMS & PANELS
+           ---------------------------------- */
+        .content-panel { 
+            background: var(--surface); 
+            border-radius: 16px; 
+            border: 1px solid var(--border); 
+            padding: 35px; 
+            margin-bottom: 30px; 
+            box-shadow: var(--shadow-md); 
+            animation: slideUpFade 0.6s 0.2s cubic-bezier(0.16, 1, 0.3, 1) both;
+        }
+
+        .panel-header { 
+            margin-bottom: 30px; 
+            padding-bottom: 20px; 
+            border-bottom: 2px solid #f0f4f8; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+        }
+
+        .panel-header h2 { 
+            font-size: 1.4rem; 
+            color: var(--ipb-blue); 
+        }
+        
+        .form-group { margin-bottom: 24px; }
+        .form-group label { 
+            display: block; 
+            font-weight: 600; 
+            margin-bottom: 10px; 
+            font-size: 0.95rem; 
+            color: var(--text-dark); 
+        }
+        .form-control { 
+            width: 100%; 
+            padding: 14px 16px; 
+            border: 2px solid var(--border); 
+            border-radius: 10px; 
+            font-size: 1rem; 
+            outline: none; 
+            transition: all 0.3s ease; 
+            background: #fff; 
+            color: var(--text-dark);
+        }
+        .form-control:focus { 
+            border-color: var(--ipb-blue); 
+            box-shadow: 0 0 0 4px rgba(0, 51, 102, 0.1); 
+        }
+        
+        .btn-action { 
+            background-color: var(--ipb-blue); 
+            color: white; 
+            border: none; 
+            padding: 16px 32px; 
+            border-radius: 10px; 
+            font-weight: 600; 
+            font-size: 1rem;
+            cursor: pointer; 
+            transition: all 0.3s ease; 
+            display: inline-flex; 
+            align-items: center; 
+            gap: 10px; 
+            font-family: 'Poppins', sans-serif;
+            box-shadow: 0 4px 15px rgba(0, 51, 102, 0.2);
+        }
+        .btn-action:hover { 
+            background-color: var(--ipb-blue-light); 
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 51, 102, 0.3);
+        }
+        .btn-action:active {
+            transform: translateY(1px);
+        }
+        .btn-action:disabled { 
+            opacity: 0.6; 
+            cursor: not-allowed; 
+            transform: none;
+        }
+        
+        .btn-success { background-color: var(--success); box-shadow: 0 4px 15px rgba(46, 204, 113, 0.3);}
+        .btn-success:hover { background-color: #27ae60; box-shadow: 0 6px 20px rgba(46, 204, 113, 0.4);}
+
+        /* Rich Text Editor Overrides */
+        #editor-container { 
+            height: 350px; 
+            border-radius: 0 0 10px 10px; 
+            font-family: 'Inter', sans-serif; 
+            font-size: 1rem; 
+            border: 2px solid var(--border);
+            border-top: none;
+        }
+        .ql-toolbar.ql-snow { 
+            border-radius: 10px 10px 0 0; 
+            background: #f8fafc; 
+            border: 2px solid var(--border);
+            padding: 12px;
+        }
+
+        /* ----------------------------------
+           EXCEL UPLOAD & TABLE
+           ---------------------------------- */
+        .upload-zone { 
+            border: 2px dashed var(--ipb-blue); 
+            border-radius: 16px; 
+            padding: 50px 20px; 
+            text-align: center; 
+            background: rgba(0, 51, 102, 0.02); 
+            cursor: pointer; 
+            transition: all 0.3s ease; 
+            margin-bottom: 25px; 
+        }
+        .upload-zone:hover { 
+            background: rgba(0, 51, 102, 0.06); 
+            border-color: var(--ipb-yellow);
+            transform: translateY(-2px);
+        }
+        .upload-zone input[type="file"] { display: none; }
+        .upload-zone i { 
+            font-size: 3.5rem; 
+            color: var(--ipb-blue); 
+            margin-bottom: 15px; 
+            display: block; 
+            transition: transform 0.3s ease;
+        }
+        .upload-zone:hover i { transform: scale(1.1); color: var(--ipb-yellow);}
+        
+        .table-responsive { 
+            width: 100%; 
+            overflow-x: auto; 
+            margin-top: 20px; 
+            max-height: 450px; 
+            border-radius: 10px; 
+            border: 1px solid var(--border); 
+            box-shadow: var(--shadow-sm);
+        }
+        table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            text-align: left; 
+            background: white; 
+        }
+        th, td { 
+            padding: 16px; 
+            border-bottom: 1px solid var(--border); 
+        }
+        th { 
+            background-color: var(--ipb-blue); 
+            color: white;
+            font-weight: 600; 
+            position: sticky; 
+            top: 0; 
+            font-family: 'Poppins', sans-serif;
+            letter-spacing: 0.5px;
+        }
+        tr:hover { background-color: #f8fafc; }
+
+        /* Settings Toggle */
+        .setting-row { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            padding: 20px 0; 
+            border-bottom: 1px solid var(--border); 
+        }
+        .setting-row:last-child { border-bottom: none; }
+        .setting-info h4 { margin-bottom: 6px; color: var(--ipb-blue); font-size: 1.1rem;}
+        .setting-info p { font-size: 0.9rem; color: var(--text-muted); line-height: 1.5;}
+
+        /* Alert System */
+        .alert-container { position: fixed; top: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 12px; }
+        .custom-alert { 
+            min-width: 320px; 
+            padding: 16px 24px; 
+            border-radius: 10px; 
+            color: white; 
+            font-weight: 500; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center;
+            animation: slideInRight 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards, fadeOutRight 0.5s 4.5s forwards; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15); 
+            font-family: 'Poppins', sans-serif;
+        }
+        .custom-alert.success { background: linear-gradient(135deg, #2ecc71, #27ae60); }
+        .custom-alert.error { background: linear-gradient(135deg, #e74c3c, #c0392b); }
+        .custom-alert.info { background: linear-gradient(135deg, var(--ipb-blue), var(--ipb-blue-light)); }
+        @keyframes slideInRight { from { transform: translateX(120%); opacity: 0;} to { transform: translateX(0); opacity: 1;} }
+        @keyframes fadeOutRight { to { transform: translateX(120%); opacity: 0; } }
+
+        /* ----------------------------------
+           MOBILE RESPONSIVENESS (MEDIA QUERIES)
+           ---------------------------------- */
+        @media (max-width: 1024px) {
+            .sidebar { width: 240px; }
+            .main-content { margin-left: 240px; max-width: calc(100% - 240px); }
+        }
+
+        @media (max-width: 768px) {
+            /* Sidebar bersembunyi secara default di Mobile */
+            .sidebar { 
+                transform: translateX(-100%); 
+                width: 280px;
+                box-shadow: 5px 0 20px rgba(0,0,0,0.1);
+            }
+            .sidebar.active-mobile {
+                transform: translateX(0);
+            }
+            
+            /* Main content melebar penuh */
+            .main-content { 
+                margin-left: 0; 
+                max-width: 100%; 
+                padding: 20px; 
+            }
+            
+            /* Tampilkan tombol hamburger */
+            .mobile-menu-btn { display: block; }
+            
+            /* Tampilkan overlay saat sidebar aktif */
+            .mobile-overlay.active { 
+                display: block; 
+                opacity: 1; 
+            }
+
+            .top-header { 
+                flex-direction: column; 
+                align-items: flex-start; 
+                gap: 15px; 
+                padding: 20px;
+            }
+            
+            .header-title-wrapper {
+                width: 100%;
+                justify-content: space-between;
+                flex-direction: row-reverse;
+            }
+
+            .user-profile { 
+                width: 100%; 
+                justify-content: flex-end; 
+                border-left: none; 
+                border-top: 1px solid var(--border); 
+                padding-top: 15px; 
+                padding-left: 0;
+            }
+
+            .content-panel { padding: 20px; }
+            
+            /* Stack input di menu setting */
+            div[style*="grid-template-columns: 1fr 1fr"] {
+                grid-template-columns: 1fr !important;
+                gap: 0 !important;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="alert-container" id="alertBox"></div>
+
+    <div class="mobile-overlay" id="mobileOverlay" onclick="toggleMobileMenu()"></div>
+
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <img src="logo-dpma.png" alt="Logo DPMA IPB">
+        </div>
+        <nav class="nav-links">
+            <a class="nav-item active" onclick="switchView('dashboard-view', this)">
+                <i>✦</i> Dashboard Blasting
+            </a>
+            <a class="nav-item" onclick="switchView('contacts-view', this)">
+                <i>☷</i> Database Kontak
+            </a>
+            <a class="nav-item" onclick="switchView('settings-view', this)">
+                <i>⚙</i> Pengaturan
+            </a>
+        </nav>
+        <div class="sidebar-footer">
+            <button class="btn-outline" onclick="handleLogout()">Keluar Sistem</button>
+        </div>
+    </aside>
+
+    <main class="main-content">
+        
+        <header class="top-header">
+            <div class="header-title-wrapper">
+                <button class="mobile-menu-btn" onclick="toggleMobileMenu()">☰</button>
+                <div>
+                    <h1 id="pageTitle">Campaign Blasting</h1>
+                    <p>Direktorat Pengembangan Masyarakat Agromaritim IPB</p>
+                </div>
+            </div>
+            <div class="user-profile">
+                <div style="text-align: right;">
+                    <p style="font-weight: 600; font-size: 0.9rem; color: var(--ipb-blue);" id="userEmailDisplay">Memuat...</p>
+                    <p style="font-size: 0.8rem; color: var(--text-muted);">Administrator DPMA</p>
+                </div>
+                <div class="avatar" id="userAvatar">A</div>
+            </div>
+        </header>
+
+        <div id="dashboard-view" class="view-section active">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <h3>Total Pesan Terkirim</h3>
+                    <div class="value" id="statSent">0</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Database Tersedia</h3>
+                    <div class="value" id="statContacts">0</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Status Sistem</h3>
+                    <div class="value" style="color: var(--success); font-size: 1.5rem; letter-spacing: 0.5px;">Online (Resend)</div>
+                </div>
+            </div>
+
+            <div class="content-panel">
+                <div class="panel-header">
+                    <h2>Buat Pesan Blasting Baru</h2>
+                </div>
+                <form id="blastForm" onsubmit="executeBlast(event)">
+                    <div class="form-group">
+                        <label for="campaignName">Nama Campaign / Judul Email</label>
+                        <input type="text" id="campaignName" class="form-control" placeholder="Contoh: Undangan Program Petani Milenial 2026" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="targetAudience">Grup Target (Diambil dari Database)</label>
+                        <select id="targetAudience" class="form-control" required>
+                            <option value="">-- Pilih Grup Target --</option>
+                            </select>
+                        <small style="color: var(--text-muted); display: block; margin-top: 8px;">*Grup target muncul setelah Anda mengimport data kontak di menu Database.</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Isi Pesan (Rich Text Editor)</label>
+                        <div id="editor-container"></div>
+                    </div>
+                    
+                    <button type="submit" class="btn-action" id="blastBtn">
+                        🚀 Kirim Blasting Sekarang
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <div id="contacts-view" class="view-section">
+            <div class="content-panel">
+                <div class="panel-header" style="flex-wrap: wrap; gap: 15px;">
+                    <h2>Import Data Kontak (Excel)</h2>
+                    <button class="btn-action btn-success" id="btnSaveDB" style="display: none; padding: 12px 24px;" onclick="saveToDatabase()">
+                        💾 Simpan ke Database
+                    </button>
+                </div>
+                
+                <p style="margin-bottom: 20px; color: var(--text-muted); line-height: 1.6;">
+                    Silakan unggah file Excel (.xlsx / .xls). Pastikan file memiliki kolom dengan header setidaknya: <b>Nama</b>, <b>Email</b>, dan <b>Grup</b> (contoh Grup: UMKM, Mahasiswa, Umum).
+                </p>
+
+                <div class="upload-zone" onclick="document.getElementById('excelFile').click()">
+                    <i>📁</i>
+                    <h3 style="color: var(--ipb-blue); margin-bottom: 8px;">Klik atau Tarik file Excel ke sini</h3>
+                    <p style="color: var(--text-muted);">Format yang didukung: .xlsx, .xls</p>
+                    <input type="file" id="excelFile" accept=".xlsx, .xls" onchange="handleExcelUpload(event)">
+                </div>
+
+                <div class="table-responsive" id="tableContainer" style="display: none;">
+                    <table id="contactsTable">
+                        <thead>
+                            <tr>
+                                <th>No</th>
+                                <th>Nama Lengkap</th>
+                                <th>Email</th>
+                                <th>Grup Kategori</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tableBody">
+                            </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div id="settings-view" class="view-section">
+            <div class="content-panel">
+                <div class="panel-header">
+                    <h2>Konfigurasi Sistem Blasting</h2>
+                </div>
+                
+                <form id="settingsForm" onsubmit="saveSettings(event)">
+                    <div class="form-group">
+                        <label for="providerSelect">Provider Email Blasting</label>
+                        <select id="providerSelect" class="form-control">
+                            <option value="resend">Resend API (Rekomendasi)</option>
+                            <option value="brevo">Brevo (Sendinblue)</option>
+                            <option value="smtp">Custom SMTP IPB</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="apiKey">API Key Provider</label>
+                        <input type="password" id="apiKey" class="form-control" placeholder="re_xxxxxxxxxxxxxxxxx" required>
+                    </div>
+
+                    <div class="setting-row">
+                        <div class="setting-info">
+                            <h4>Profil Pengirim Default</h4>
+                            <p>Nama dan email yang akan terlihat oleh penerima saat menerima blasting.</p>
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 20px;">
+                        <div class="form-group">
+                            <label for="senderName">Nama Pengirim (Sender Title)</label>
+                            <input type="text" id="senderName" class="form-control" placeholder="Direktorat DPMA IPB" value="DPMA IPB University" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="senderEmail">Email Pengirim</label>
+                            <input type="email" id="senderEmail" class="form-control" placeholder="no-reply@dpma.ipb.ac.id" value="info@dpma.ipb.ac.id" required>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn-action" style="margin-top: 15px;">💾 Simpan Pengaturan</button>
+                </form>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        // ==========================================
+        // FUNGSI MOBILE SIDEBAR TOGGLE (BARU)
+        // ==========================================
+        function toggleMobileMenu() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('mobileOverlay');
+            
+            sidebar.classList.toggle('active-mobile');
+            overlay.classList.toggle('active');
+        }
+
+
+        // ==========================================
+        // 1. INISIALISASI SUPABASE
+        // ==========================================
+        const supabaseUrl = 'https://taatrpyaeafoisykizav.supabase.co'; // GANTI INI
+        const supabaseKey = 'sb_publishable_TSppcNOP407bDmGg_3tGbA_kW-YdLPR'; // GANTI INI
+        
+        // Menggunakan supabaseClient agar tidak bentrok dengan CDN bawaan
+        const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+        // State Management
+        let currentUser = null;
+        let importedContacts = []; // Menyimpan data excel sementara
+        let quillEditor; // Instansi editor
+
+        // ==========================================
+        // 2. SISTEM ALERT CUSTOM
+        // ==========================================
+        function showAlert(message, type = 'success') {
+            const alertBox = document.getElementById('alertBox');
+            const alertEl = document.createElement('div');
+            alertEl.className = `custom-alert ${type}`;
+            alertEl.innerHTML = `<span>${message}</span><span style="cursor:pointer; font-weight:bold; font-size:1.2rem; margin-left:15px;" onclick="this.parentElement.remove()">×</span>`;
+            alertBox.appendChild(alertEl);
+            setTimeout(() => { if(alertEl.parentElement) alertEl.remove(); }, 5000);
+        }
+
+        // ==========================================
+        // 3. PROTEKSI SESI & DATA AWAL
+        // ==========================================
+        async function initApp() {
+            // Cek Login
+            const { data: { session }, error } = await supabaseClient.auth.getSession();
+            if (!session) {
+                // window.location.href = 'index.html'; 
+                document.getElementById('userEmailDisplay').innerText = "Mode Pengembangan";
+            } else {
+                currentUser = session.user;
+                document.getElementById('userEmailDisplay').innerText = currentUser.email;
+                document.getElementById('userAvatar').innerText = currentUser.email.charAt(0).toUpperCase();
+            }
+
+            // Inisialisasi Quill Rich Text Editor
+            quillEditor = new Quill('#editor-container', {
+                theme: 'snow',
+                placeholder: 'Ketik pesan profesional Anda di sini...',
+                modules: {
+                    toolbar: [
+                        [{ 'header': [1, 2, 3, false] }],
+                        ['bold', 'italic', 'underline', 'strike'],
+                        [{ 'color': [] }, { 'background': [] }],
+                        [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                        [{ 'align': [] }],
+                        ['link', 'blockquote', 'code-block'],
+                        ['clean'] // Tombol hapus format
+                    ]
+                }
+            });
+
+            // Load pengaturan dari LocalStorage
+            loadSettings();
+            
+            // Render dummy dropdown untuk awal jika database kosong
+            updateTargetDropdown(); 
+        }
+
+        // ==========================================
+        // 4. SISTEM NAVIGASI SPA (GANTI HALAMAN)
+        // ==========================================
+        const pageTitles = {
+            'dashboard-view': 'Campaign Blasting',
+            'contacts-view': 'Database Manajemen Kontak',
+            'settings-view': 'Pengaturan Sistem'
+        };
+
+        function switchView(viewId, element) {
+            // Tutup sidebar di versi mobile setelah menu di-klik
+            if(window.innerWidth <= 768) {
+                toggleMobileMenu();
+            }
+
+            // Sembunyikan semua section
+            document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+            // Tampilkan section yang dituju
+            document.getElementById(viewId).classList.add('active');
+            
+            // Ubah judul header
+            document.getElementById('pageTitle').innerText = pageTitles[viewId];
+
+            // Update sidebar UI (ganti warna menu aktif)
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            element.classList.add('active');
+        }
+
+        // ==========================================
+        // 5. FITUR IMPORT EXCEL (SHEETJS)
+        // ==========================================
+        function handleExcelUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                
+                // Ambil sheet pertama
+                const firstSheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[firstSheetName];
+                
+                // Convert to JSON
+                const json = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
+                
+                if(json.length > 0) {
+                    processImportedData(json);
+                } else {
+                    showAlert('File Excel kosong atau format tidak sesuai', 'error');
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function processImportedData(data) {
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = '';
+            importedContacts = [];
+            let validCount = 0;
+
+            data.forEach((row, index) => {
+                // Deteksi nama kolom secara fleksibel
+                const keys = Object.keys(row);
+                const nameKey = keys.find(k => k.toLowerCase().includes('nama'));
+                const emailKey = keys.find(k => k.toLowerCase().includes('email'));
+                const groupKey = keys.find(k => k.toLowerCase().includes('grup') || k.toLowerCase().includes('kategori'));
+
+                if (nameKey && emailKey) {
+                    const name = row[nameKey];
+                    const email = row[emailKey];
+                    const group = groupKey ? row[groupKey] : 'Umum';
+
+                    if(email.includes('@')) {
+                        importedContacts.push({ name, email, group });
+                        
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td>${validCount + 1}</td>
+                            <td style="font-weight: 500;">${name}</td>
+                            <td>${email}</td>
+                            <td><span style="background: rgba(0,51,102,0.08); color: var(--ipb-blue); padding: 6px 12px; border-radius: 6px; font-size: 0.85rem; font-weight: 600;">${group}</span></td>
+                        `;
+                        tbody.appendChild(tr);
+                        validCount++;
+                    }
+                }
+            });
+
+            if(validCount > 0) {
+                document.getElementById('tableContainer').style.display = 'block';
+                document.getElementById('btnSaveDB').style.display = 'inline-flex';
+                showAlert(`Berhasil membaca ${validCount} kontak dari Excel`, 'success');
+            } else {
+                showAlert('Tidak menemukan kolom Nama dan Email yang valid di Excel', 'error');
+            }
+        }
+
+        // Menyimpan ke Supabase secara NYATA
+        async function saveToDatabase() {
+            if(importedContacts.length === 0) return;
+            
+            const btn = document.getElementById('btnSaveDB');
+            btn.innerText = "⏳ Menyimpan ke Database...";
+            btn.disabled = true;
+
+            try {
+                const { data: { session } } = await supabaseClient.auth.getSession();
+                if (!session) throw new Error("Sesi Anda telah habis, silakan login ulang.");
+
+                const formattedData = importedContacts.map(contact => ({
+                    name: contact.name,
+                    email: contact.email,
+                    category: contact.group.toLowerCase() 
+                }));
+
+                const { data, error } = await supabaseClient
+                    .from('contacts')
+                    .insert(formattedData)
+                    .select(); 
+
+                if (error) throw error;
+                
+                showAlert(`${formattedData.length} Kontak berhasil disimpan permanen ke Supabase!`, 'success');
+                
+                const { count, error: countError } = await supabaseClient
+                    .from('contacts')
+                    .select('*', { count: 'exact', head: true });
+                
+                if (!countError) {
+                    document.getElementById('statContacts').innerText = count;
+                }
+                
+                updateTargetDropdown();
+                
+                btn.innerText = "✅ Berhasil Disimpan";
+            } catch (err) {
+                showAlert('Gagal menyimpan ke database: ' + err.message, 'error');
+                btn.innerText = "💾 Coba Simpan Lagi";
+                btn.disabled = false;
+            }
+        }
+
+        function updateTargetDropdown() {
+            const select = document.getElementById('targetAudience');
+            if (importedContacts.length > 0) {
+                const uniqueGroups = [...new Set(importedContacts.map(item => item.group))];
+                select.innerHTML = '<option value="">-- Pilih Grup Target --</option>';
+                uniqueGroups.forEach(group => {
+                    const opt = document.createElement('option');
+                    opt.value = group;
+                    opt.textContent = `${group} (${importedContacts.filter(c => c.group === group).length} kontak)`;
+                    select.appendChild(opt);
+                });
+                select.innerHTML += '<option value="all">Kirim ke Semua Grup</option>';
+            }
+        }
+
+        // ==========================================
+        // 6. FITUR SETTINGS & LOKAL STORAGE
+        // ==========================================
+        function saveSettings(e) {
+            e.preventDefault();
+            const provider = document.getElementById('providerSelect').value;
+            const apiKey = document.getElementById('apiKey').value;
+            const senderName = document.getElementById('senderName').value;
+            const senderEmail = document.getElementById('senderEmail').value;
+
+            const config = { provider, apiKey, senderName, senderEmail };
+            localStorage.setItem('dpma_blast_settings', JSON.stringify(config));
+            
+            showAlert('Pengaturan berhasil disimpan!', 'success');
+        }
+
+        function loadSettings() {
+            const saved = localStorage.getItem('dpma_blast_settings');
+            if(saved) {
+                const config = JSON.parse(saved);
+                document.getElementById('providerSelect').value = config.provider;
+                document.getElementById('apiKey').value = config.apiKey;
+                document.getElementById('senderName').value = config.senderName;
+                document.getElementById('senderEmail').value = config.senderEmail;
+            }
+        }
+
+        // ==========================================
+        // 7. EKSEKUSI BLASTING UTAMA
+        // ==========================================
+        function executeBlast(e) {
+            e.preventDefault();
+            
+            const btn = document.getElementById('blastBtn');
+            const target = document.getElementById('targetAudience').value;
+            const campaignName = document.getElementById('campaignName').value;
+            
+            const messageHTML = quillEditor.root.innerHTML;
+            const messageText = quillEditor.getText().trim();
+
+            if (!target) {
+                showAlert('Harap pilih grup target penerima', 'error');
+                return;
+            }
+
+            if (messageText.length === 0) {
+                showAlert('Isi pesan tidak boleh kosong', 'error');
+                return;
+            }
+
+            const settings = JSON.parse(localStorage.getItem('dpma_blast_settings')) || {};
+            if(!settings.apiKey) {
+                showAlert('Harap isi API Key di menu Pengaturan terlebih dahulu!', 'error');
+                switchView('settings-view', document.querySelectorAll('.nav-item')[2]);
+                return;
+            }
+
+            btn.innerHTML = "⏳ Memproses Eksekusi API...";
+            btn.disabled = true;
+
+            setTimeout(() => {
+                showAlert(`SUKSES! Campaign "${campaignName}" sedang diproses menggunakan ${settings.provider.toUpperCase()}.`, 'success');
+                
+                let currentSent = parseInt(document.getElementById('statSent').innerText.replace(/\./g, ''));
+                let sendCount = target === 'all' ? importedContacts.length : importedContacts.filter(c => c.group === target).length;
+                if(sendCount === 0) sendCount = 250; 
+                
+                document.getElementById('statSent').innerText = (currentSent + sendCount).toLocaleString('id-ID');
+
+                document.getElementById('blastForm').reset();
+                quillEditor.root.innerHTML = ''; 
+                btn.innerHTML = "🚀 Kirim Blasting Sekarang";
+                btn.disabled = false;
+            }, 2500);
+        }
+
+        // LOGOUT
+        async function handleLogout() {
+            await supabaseClient.auth.signOut();
+            window.location.href = 'index.html';
+        }
+
+        // Jalankan Inisialisasi saat script dimuat
+        window.onload = initApp;
+    </script>
+</body>
+</html>
