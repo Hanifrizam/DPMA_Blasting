@@ -1403,7 +1403,7 @@
                 const { data, error } = await supabaseClient.functions.invoke('send-blast', {
                     body: { 
                         campaignName: campaignName,
-                        targetAudience: targetAudience,
+                        targetAudience: target, // <--- Sudah diperbaiki
                         messageHTML: messageHTML,
                         settings: settings 
                     }
