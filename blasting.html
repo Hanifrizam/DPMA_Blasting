@@ -1024,7 +1024,10 @@
         // ==========================================
         // 7. EKSEKUSI BLASTING UTAMA
         // ==========================================
-        function executeBlast(e) {
+        // ==========================================
+        // 7. EKSEKUSI BLASTING UTAMA (REAL KE SUPABASE EDGE FUNCTION)
+        // ==========================================
+        async function executeBlast(e) {
             e.preventDefault();
             
             const btn = document.getElementById('blastBtn');
@@ -1051,23 +1054,50 @@
                 return;
             }
 
-            btn.innerHTML = "⏳ Memproses Eksekusi API...";
+            btn.innerHTML = "⏳ Mengirim Blasting... (Jangan tutup halaman)";
             btn.disabled = true;
 
-            setTimeout(() => {
-                showAlert(`SUKSES! Campaign "${campaignName}" sedang diproses menggunakan ${settings.provider.toUpperCase()}.`, 'success');
+            try {
+                // 1. Pastikan user masih login
+                const { data: { session } } = await supabaseClient.auth.getSession();
+                if (!session) throw new Error("Sesi Anda telah habis, silakan login ulang.");
+
+                // 2. Tembak data ke Supabase Edge Function ('send-blast')
+                const { data, error } = await supabaseClient.functions.invoke('send-blast', {
+                    body: { 
+                        campaignName: campaignName,
+                        targetAudience: targetAudience,
+                        messageHTML: messageHTML,
+                        settings: settings // Kirim kredensial API secara aman ke backend
+                    }
+                });
+
+                // 3. Tangani jika terjadi error dari Supabase atau Resend
+                if (error) {
+                    throw new Error("Gagal menghubungi server: " + error.message);
+                }
+                if (data && data.error) {
+                    throw new Error("Gagal mengirim email: " + data.error);
+                }
+
+                // 4. Jika berhasil, tampilkan notifikasi dan update statistik
+                showAlert(`SUKSES! Campaign "${campaignName}" berhasil dikirim ke ${data.count} kontak via ${settings.provider.toUpperCase()}.`, 'success');
                 
                 let currentSent = parseInt(document.getElementById('statSent').innerText.replace(/\./g, ''));
-                let sendCount = target === 'all' ? importedContacts.length : importedContacts.filter(c => c.group === target).length;
-                if(sendCount === 0) sendCount = 250; 
-                
-                document.getElementById('statSent').innerText = (currentSent + sendCount).toLocaleString('id-ID');
+                document.getElementById('statSent').innerText = (currentSent + data.count).toLocaleString('id-ID');
 
+                // 5. Bersihkan form
                 document.getElementById('blastForm').reset();
                 quillEditor.root.innerHTML = ''; 
+
+            } catch (err) {
+                console.error("Blast Error:", err);
+                showAlert('Terjadi kesalahan: ' + err.message, 'error');
+            } finally {
+                // Kembalikan tombol ke kondisi semula
                 btn.innerHTML = "🚀 Kirim Blasting Sekarang";
                 btn.disabled = false;
-            }, 2500);
+            }
         }
 
         // LOGOUT
