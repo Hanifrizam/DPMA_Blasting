@@ -757,6 +757,12 @@
                         <label>Isi Pesan (Rich Text Editor)</label>
                         <div id="editor-container"></div>
                     </div>
+
+                    <div class="form-group" style="margin-top: 25px;">
+                        <label for="attachmentFiles">📎 Lampiran File (Opsional)</label>
+                        <input type="file" id="attachmentFiles" class="form-control" multiple accept=".pdf,.doc,.docx,.jpg,.png,.xls,.xlsx">
+                        <small style="color: var(--text-muted); display: block; margin-top: 8px;">*Anda bisa memilih lebih dari 1 file. Maksimal ukuran total file 3MB agar pengiriman stabil.</small>
+                    </div>
                     
                     <button type="submit" class="btn-action" id="blastBtn">
                         🚀 Kirim Blasting Sekarang
@@ -1372,6 +1378,17 @@
         // ==========================================
         // 8. EKSEKUSI BLASTING UTAMA (API SUPABASE)
         // ==========================================
+        // Fungsi pembantu mengubah file menjadi Base64 (Syarat wajib untuk API)
+        const fileToBase64 = file => new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => resolve(reader.result.split(',')[1]);
+            reader.onerror = error => reject(error);
+        });
+
+        // ==========================================
+        // 8. EKSEKUSI BLASTING UTAMA (API SUPABASE)
+        // ==========================================
         async function executeBlast(e) {
             e.preventDefault();
             
@@ -1392,42 +1409,62 @@
                 return;
             }
 
-            btn.innerHTML = "⏳ Mengirim Campaign via Server... (Tunggu Sebentar)";
+            btn.innerHTML = "⏳ Menyiapkan Data...";
             btn.disabled = true;
 
             try {
                 const { data: { session } } = await supabaseClient.auth.getSession();
                 if (!session) throw new Error("Sesi Anda telah habis, silakan login ulang.");
 
-                // Panggil Supabase Edge Function untuk Eksekusi Resend
+                // --- PROSES FILE LAMPIRAN (ATTACHMENT) ---
+                const fileInput = document.getElementById('attachmentFiles');
+                let attachmentsArray = [];
+                
+                if (fileInput.files.length > 0) {
+                    btn.innerHTML = "⏳ Memproses File Lampiran...";
+                    for (let i = 0; i < fileInput.files.length; i++) {
+                        const file = fileInput.files[i];
+                        // Cegah file raksasa masuk agar server tidak crash
+                        if (file.size > 3.5 * 1024 * 1024) { 
+                            throw new Error(`File "${file.name}" terlalu besar. Maksimal 3MB per file.`);
+                        }
+                        const base64Content = await fileToBase64(file);
+                        attachmentsArray.push({
+                            filename: file.name,
+                            content: base64Content
+                        });
+                    }
+                }
+
+                btn.innerHTML = "⏳ Mengirim Campaign via Server... (Jangan Tutup Halaman)";
+
+                // Panggil Supabase Edge Function
                 const { data, error } = await supabaseClient.functions.invoke('send-blast', {
                     body: { 
                         campaignName: campaignName,
-                        targetAudience: target, // <--- Sudah diperbaiki
+                        targetAudience: target,
                         messageHTML: messageHTML,
-                        settings: settings 
+                        settings: settings,
+                        attachments: attachmentsArray // Kirim lampiran ke server
                     }
                 });
 
                 if (error) throw new Error("Gagal menghubungi server Edge: " + error.message);
                 if (data && data.error) throw new Error("Resend API Error: " + data.error);
 
-                // --- CATAT KE TABEL RIWAYAT (HISTORY) ---
-                // Supaya muncul di menu Riwayat Blasting
+                // --- CATAT KE TABEL RIWAYAT ---
                 await supabaseClient.from('blast_history').insert([{
                     campaign_name: campaignName,
-                    target_audience: targetAudience,
+                    target_audience: target,
                     message_body: messageHTML,
-                    sent_by: session.user.id // uuid admin pengirim
+                    sent_by: session.user.id
                 }]);
 
                 showAlert(`SUKSES LENGKAP! Campaign "${campaignName}" berhasil dikirim ke ${data.count} kontak.`, 'success');
                 
-                // Update statistik total kirim
                 let currentSent = parseInt(document.getElementById('statSent').innerText.replace(/\./g, ''));
                 document.getElementById('statSent').innerText = (currentSent + data.count).toLocaleString('id-ID');
 
-                // Bersihkan form
                 document.getElementById('blastForm').reset();
                 quillEditor.root.innerHTML = ''; 
 
@@ -1439,7 +1476,6 @@
                 btn.disabled = false;
             }
         }
-
         // LOGOUT
         async function handleLogout() {
             await supabaseClient.auth.signOut();
