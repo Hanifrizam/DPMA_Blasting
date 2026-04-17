@@ -1375,14 +1375,14 @@
         }
 
 
-        // ==========================================
-        // 8. EKSEKUSI BLASTING UTAMA (API SUPABASE)
-        // ==========================================
-        // Fungsi pembantu mengubah file menjadi Base64 (Syarat wajib untuk API)
+        // Fungsi pembantu mengubah file menjadi Base64 & Mengambil Tipe File
         const fileToBase64 = file => new Promise((resolve, reject) => {
             const reader = new FileReader();
             reader.readAsDataURL(file);
-            reader.onload = () => resolve(reader.result.split(',')[1]);
+            reader.onload = () => resolve({
+                base64: reader.result.split(',')[1],
+                type: file.type || 'application/octet-stream' // Ambil KTP/Tipe File
+            });
             reader.onerror = error => reject(error);
         });
 
@@ -1424,14 +1424,14 @@
                     btn.innerHTML = "⏳ Memproses File Lampiran...";
                     for (let i = 0; i < fileInput.files.length; i++) {
                         const file = fileInput.files[i];
-                        // Cegah file raksasa masuk agar server tidak crash
                         if (file.size > 3.5 * 1024 * 1024) { 
-                            throw new Error(`File "${file.name}" terlalu besar. Maksimal 3MB per file.`);
+                            throw new Error(`File "${file.name}" terlalu besar. Maksimal 3.5MB per file.`);
                         }
-                        const base64Content = await fileToBase64(file);
+                        const fileData = await fileToBase64(file);
                         attachmentsArray.push({
                             filename: file.name,
-                            content: base64Content
+                            content: fileData.base64,
+                            contentType: fileData.type // Masukkan tipe file ke array
                         });
                     }
                 }
@@ -1445,14 +1445,13 @@
                         targetAudience: target,
                         messageHTML: messageHTML,
                         settings: settings,
-                        attachments: attachmentsArray // Kirim lampiran ke server
+                        attachments: attachmentsArray 
                     }
                 });
 
                 if (error) throw new Error("Gagal menghubungi server Edge: " + error.message);
                 if (data && data.error) throw new Error("Resend API Error: " + data.error);
 
-                // --- CATAT KE TABEL RIWAYAT ---
                 await supabaseClient.from('blast_history').insert([{
                     campaign_name: campaignName,
                     target_audience: target,
