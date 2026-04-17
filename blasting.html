@@ -954,8 +954,8 @@
 
                 const { data, error } = await supabaseClient
                     .from('contacts')
-                    .insert(formattedData)
-                    .select(); 
+                    .upsert(formattedData, { onConflict: 'email' }) // Gunakan upsert agar tidak error jika email ganda
+                    .select();
 
                 if (error) throw error;
                 
