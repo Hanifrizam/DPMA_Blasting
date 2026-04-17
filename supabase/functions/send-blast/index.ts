@@ -65,9 +65,12 @@ serve(async (req) => {
         `
       };
 
-      // Jika ada file lampiran, masukkan ke payload
-      if (attachments && attachments.length > 0) {
-        emailPayload.attachments = attachments;
+      // Jika ada file lampiran, pastikan formatnya dibaca utuh oleh Resend
+      if (attachments && Array.isArray(attachments) && attachments.length > 0) {
+        emailPayload.attachments = attachments.map((att: any) => ({
+          filename: att.filename,
+          content: String(att.content) // Kunci sebagai string murni
+        }));
       }
 
       return emailPayload;
