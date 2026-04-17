@@ -28,7 +28,20 @@ serve(async (req) => {
     if (dbError) throw dbError
     if (!contacts || contacts.length === 0) throw new Error("Tidak ada kontak di grup target ini.")
 
-    const emailsToSend = contacts.map(contact => {
+    // KUNCI 1: Siapkan file attachment sekali saja agar memori tidak berat
+    let processedAttachments = [];
+    if (attachments && Array.isArray(attachments) && attachments.length > 0) {
+      processedAttachments = attachments.map((att: any) => ({
+        filename: att.filename,
+        content: String(att.content) // Jalur single email otomatis membaca Base64 murni
+      }));
+    }
+
+    let sentCount = 0;
+
+    // KUNCI 2: Kita tinggalkan jalur /emails/batch. 
+    // Kita tembak jalur reguler (/emails) satu per satu secara beruntun.
+    for (const contact of contacts) {
       const emailPayload: any = {
         from: `${settings.senderName} <${settings.senderEmail}>`,
         to: [contact.email],
@@ -53,37 +66,36 @@ serve(async (req) => {
         `
       };
 
-      // MENYUSUN LAMPIRAN DENGAN MIME TYPE AGAR DITERIMA GMAIL
-      if (attachments && Array.isArray(attachments) && attachments.length > 0) {
-        emailPayload.attachments = attachments.map((att: any) => ({
-          filename: att.filename,
-          content: String(att.content),
-          content_type: att.contentType // <--- INI KUNCINYA
-        }));
+      if (processedAttachments.length > 0) {
+        emailPayload.attachments = processedAttachments;
       }
 
-      return emailPayload;
-    });
+      // Endpointnya BERUBAH jadi /emails biasa (mendukung penuh lampiran)
+      const res = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${settings.apiKey}`
+        },
+        body: JSON.stringify(emailPayload)
+      });
 
-    const res = await fetch('https://api.resend.com/emails/batch', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${settings.apiKey}`
-      },
-      body: JSON.stringify(emailsToSend)
-    })
-
-    const responseData = await res.json()
-
-    if (res.ok) {
-      return new Response(JSON.stringify({ success: true, count: emailsToSend.length, data: responseData }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200,
-      })
-    } else {
-      throw new Error(JSON.stringify(responseData))
+      if (res.ok) {
+        sentCount++;
+      }
+      
+      // Jeda 200 milidetik agar server Resend tidak menganggapnya sebagai serangan Spam (Rate Limit)
+      await new Promise(resolve => setTimeout(resolve, 200));
     }
+
+    if (sentCount === 0 && contacts.length > 0) {
+        throw new Error("Gagal mengirim email, kemungkinan server Resend sedang sibuk.");
+    }
+
+    return new Response(JSON.stringify({ success: true, count: sentCount }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 200,
+    })
 
   } catch (error) {
     return new Response(JSON.stringify({ error: error.message }), {
