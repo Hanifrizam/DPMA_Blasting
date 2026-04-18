@@ -48,8 +48,8 @@ serve(async (req) => {
               </div>
             </div>
             <div style="background-color: #f4f7f6; padding: 25px 20px; text-align: center; font-size: 12px; color: #64748b; border-top: 1px solid #e2e8f0;">
-              <p style="margin: 0 0 8px 0; font-size: 13px; color: #003366;"><strong>Direktorat Pengembangan Masyarakat Agromaritim (DPMA)</strong><br>IPB University</p>
-              <p style="margin: 0;">Gedung Andi Hakim Nasoetion Lantai 1, Kampus IPB Dramaga, Bogor, Jawa Barat</p>
+              <p style="margin: 0 0 8px 0; font-size: 13px; color: #003366;"><strong>Lembaga Pengembangan Agromaritim dan Akselerasi Innopreneurship (LPA2I)</strong><br>IPB University</p>
+              <p style="margin: 0;">Kampus IPB Taman Kencana Jl. Taman Kencana No.3 Babakan Bogor Tengah, Bogor 16128 agromaritim@apps.ipb.ac.id</p>
               <p style="margin: 20px 0 0 0; font-size: 11px; color: #94a3b8;"><em>Email ini otomatis dikirim oleh Sistem Blasting DPMA IPB.</em></p>
             </div>
           </div>
