@@ -1374,14 +1374,13 @@
             }
         }
 
-
-        // Fungsi pembantu mengubah file menjadi Base64 & Mengambil Tipe File
+// Fungsi pembantu mengubah file menjadi Base64 & Ekstrak Tipe MIME
         const fileToBase64 = file => new Promise((resolve, reject) => {
             const reader = new FileReader();
             reader.readAsDataURL(file);
             reader.onload = () => resolve({
-                base64: reader.result.split(',')[1],
-                type: file.type || 'application/octet-stream' // Ambil KTP/Tipe File
+                base64: reader.result.split(',')[1], // Ambil kode murni
+                type: file.type || 'application/octet-stream' // Ambil KTP File
             });
             reader.onerror = error => reject(error);
         });
@@ -1404,8 +1403,7 @@
 
             const settings = JSON.parse(localStorage.getItem('dpma_blast_settings')) || {};
             if(!settings.apiKey) {
-                showAlert('Harap isi API Key Resend di menu Pengaturan terlebih dahulu!', 'error');
-                switchView('settings-view', document.querySelectorAll('.nav-item')[3]);
+                showAlert('Harap isi API Key di menu Pengaturan!', 'error');
                 return;
             }
 
@@ -1416,22 +1414,24 @@
                 const { data: { session } } = await supabaseClient.auth.getSession();
                 if (!session) throw new Error("Sesi Anda telah habis, silakan login ulang.");
 
-                // --- PROSES FILE LAMPIRAN (ATTACHMENT) ---
+                // --- PROSES FILE LAMPIRAN SECARA STRICT ---
                 const fileInput = document.getElementById('attachmentFiles');
                 let attachmentsArray = [];
                 
-                if (fileInput.files.length > 0) {
-                    btn.innerHTML = "⏳ Memproses File Lampiran...";
+                if (fileInput && fileInput.files.length > 0) {
+                    btn.innerHTML = `⏳ Memproses ${fileInput.files.length} File Lampiran...`;
                     for (let i = 0; i < fileInput.files.length; i++) {
                         const file = fileInput.files[i];
                         if (file.size > 3.5 * 1024 * 1024) { 
-                            throw new Error(`File "${file.name}" terlalu besar. Maksimal 3.5MB per file.`);
+                            throw new Error(`File "${file.name}" terlalu besar. Maksimal 3.5MB.`);
                         }
                         const fileData = await fileToBase64(file);
+                        
+                        // Susun persis seperti standar API Resend
                         attachmentsArray.push({
                             filename: file.name,
                             content: fileData.base64,
-                            contentType: fileData.type // Masukkan tipe file ke array
+                            content_type: fileData.type
                         });
                     }
                 }
@@ -1445,7 +1445,7 @@
                         targetAudience: target,
                         messageHTML: messageHTML,
                         settings: settings,
-                        attachments: attachmentsArray 
+                        attachments: attachmentsArray // Tembakkan array lampiran ke server
                     }
                 });
 
@@ -1459,7 +1459,7 @@
                     sent_by: session.user.id
                 }]);
 
-                showAlert(`SUKSES LENGKAP! Campaign "${campaignName}" berhasil dikirim ke ${data.count} kontak.`, 'success');
+                showAlert(`SUKSES! Campaign "${campaignName}" dengan ${attachmentsArray.length} lampiran berhasil dikirim!`, 'success');
                 
                 let currentSent = parseInt(document.getElementById('statSent').innerText.replace(/\./g, ''));
                 document.getElementById('statSent').innerText = (currentSent + data.count).toLocaleString('id-ID');
@@ -1469,12 +1469,13 @@
 
             } catch (err) {
                 console.error("Blast Error Detail:", err);
-                showAlert('Terjadi kesalahan eksekusi: ' + err.message, 'error');
+                showAlert('Terjadi kesalahan: ' + err.message, 'error');
             } finally {
                 btn.innerHTML = "🚀 Kirim Blasting Sekarang";
                 btn.disabled = false;
             }
         }
+        
         // LOGOUT
         async function handleLogout() {
             await supabaseClient.auth.signOut();

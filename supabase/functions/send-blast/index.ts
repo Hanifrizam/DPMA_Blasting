@@ -26,21 +26,11 @@ serve(async (req) => {
     const { data: contacts, error: dbError } = await query
 
     if (dbError) throw dbError
-    if (!contacts || contacts.length === 0) throw new Error("Tidak ada kontak di grup target ini.")
-
-    // KUNCI 1: Siapkan file attachment sekali saja agar memori tidak berat
-    let processedAttachments = [];
-    if (attachments && Array.isArray(attachments) && attachments.length > 0) {
-      processedAttachments = attachments.map((att: any) => ({
-        filename: att.filename,
-        content: String(att.content) // Jalur single email otomatis membaca Base64 murni
-      }));
-    }
+    if (!contacts || contacts.length === 0) throw new Error("Tidak ada kontak di grup target.")
 
     let sentCount = 0;
 
-    // KUNCI 2: Kita tinggalkan jalur /emails/batch. 
-    // Kita tembak jalur reguler (/emails) satu per satu secara beruntun.
+    // Proses kirim satu per satu (Sekuensial)
     for (const contact of contacts) {
       const emailPayload: any = {
         from: `${settings.senderName} <${settings.senderEmail}>`,
@@ -60,17 +50,17 @@ serve(async (req) => {
             <div style="background-color: #f4f7f6; padding: 25px 20px; text-align: center; font-size: 12px; color: #64748b; border-top: 1px solid #e2e8f0;">
               <p style="margin: 0 0 8px 0; font-size: 13px; color: #003366;"><strong>Direktorat Pengembangan Masyarakat Agromaritim (DPMA)</strong><br>IPB University</p>
               <p style="margin: 0;">Gedung Andi Hakim Nasoetion Lantai 1, Kampus IPB Dramaga, Bogor, Jawa Barat</p>
-              <p style="margin: 20px 0 0 0; font-size: 11px; color: #94a3b8;"><em>Email ini dikirim otomatis oleh Sistem Blasting DPMA IPB. Harap tidak membalas langsung ke alamat email ini.</em></p>
+              <p style="margin: 20px 0 0 0; font-size: 11px; color: #94a3b8;"><em>Email ini otomatis dikirim oleh Sistem Blasting DPMA IPB.</em></p>
             </div>
           </div>
         `
       };
 
-      if (processedAttachments.length > 0) {
-        emailPayload.attachments = processedAttachments;
+      // BYPASS TOTAL: Langsung tempel attachment dari frontend ke Resend
+      if (attachments && attachments.length > 0) {
+        emailPayload.attachments = attachments;
       }
 
-      // Endpointnya BERUBAH jadi /emails biasa (mendukung penuh lampiran)
       const res = await fetch('https://api.resend.com/emails', {
         method: 'POST',
         headers: {
@@ -80,17 +70,13 @@ serve(async (req) => {
         body: JSON.stringify(emailPayload)
       });
 
-      if (res.ok) {
-        sentCount++;
-      }
+      if (res.ok) sentCount++;
       
-      // Jeda 200 milidetik agar server Resend tidak menganggapnya sebagai serangan Spam (Rate Limit)
+      // Jeda 200ms agar server tidak nge-hang
       await new Promise(resolve => setTimeout(resolve, 200));
     }
 
-    if (sentCount === 0 && contacts.length > 0) {
-        throw new Error("Gagal mengirim email, kemungkinan server Resend sedang sibuk.");
-    }
+    if (sentCount === 0 && contacts.length > 0) throw new Error("Gagal mengirim email ke Resend.");
 
     return new Response(JSON.stringify({ success: true, count: sentCount }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
