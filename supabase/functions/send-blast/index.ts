@@ -39,7 +39,7 @@ serve(async (req) => {
         html: `
           <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 650px; margin: 0 auto; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.05);">
             <div style="background-color: #003366; padding: 25px; text-align: center; border-bottom: 5px solid #fec315;">
-              <img src="https://blastingdpmaipb.web.id/logo-lp2ai-putih.png" alt="Logo LP2AI" style="max-height: 60px; max-width: 100%;">
+              <img src="https://blastingdpmaipb.web.id/logo-lp2ai-putihh.png" alt="Logo LP2AI" style="max-height: 60px; max-width: 100%;">
             </div>
             <div style="padding: 35px 30px; color: #333333; line-height: 1.6; font-size: 15px;">
               <p style="font-size: 16px; margin-bottom: 25px;">Halo <strong>${contact.name}</strong>,</p>
