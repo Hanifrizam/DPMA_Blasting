@@ -582,6 +582,18 @@
         }
         .ql-snow .ql-picker.ql-size .ql-picker-label::before { content: 'Ukuran Font' !important; font-weight: 500;}
         .ql-snow .ql-picker.ql-font .ql-picker-label::before { content: 'Jenis Font' !important; font-weight: 500;}
+        
+        /* ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+           NEW: KUSTOMISASI CSS UNTUK DROPDOWN SPASI BARIS (LINE SPACING)
+           ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        */
+        .ql-snow .ql-picker.ql-lineHeight { width: 110px; }
+        .ql-snow .ql-picker.ql-lineHeight .ql-picker-label[data-value]::before,
+        .ql-snow .ql-picker.ql-lineHeight .ql-picker-item[data-value]::before {
+            content: attr(data-value) !important;
+            font-family: 'Inter', sans-serif;
+        }
+        .ql-snow .ql-picker.ql-lineHeight .ql-picker-label::before { content: 'Spasi (1.0)' !important; font-weight: 500;}
 
         /* Pelacak Kapasitas HTML Bawah Editor */
         .editor-size-tracker {
@@ -1164,6 +1176,19 @@
                         <svg class="svg-icon" viewBox="0 0 24 24"><path d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
                         Luncurkan Eksekusi Blasting
                     </button>
+
+                    <div id="blastProgressContainer" style="display: none; margin-top: 20px; background: #F8FAFC; border-radius: var(--radius-md); border: 1px solid var(--border-medium); padding: 18px 24px; box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                            <span style="font-size: 0.95rem; font-weight: 600; color: var(--ipb-primary); display:flex; align-items:center; gap:8px;" id="blastProgressText">
+                                <svg class="svg-icon" style="animation: spin 1s linear infinite;" viewBox="0 0 24 24"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                                Memulai Protokol Peluncuran...
+                            </span>
+                            <span style="font-size: 1.1rem; font-weight: 800; color: var(--ipb-accent);" id="blastProgressPercent">0%</span>
+                        </div>
+                        <div style="width: 100%; height: 10px; background: var(--border-light); border-radius: 10px; overflow: hidden; position: relative;">
+                            <div id="blastProgressBar" style="width: 0%; height: 100%; background: linear-gradient(90deg, var(--status-success), #34D399); transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1); border-radius: 10px;"></div>
+                        </div>
+                    </div>
                 </form>
             </div>
         </div>
@@ -1496,6 +1521,17 @@
             // 3. Modul Kustom: Quill Blot Formatter (Menyelesaikan Isu Gambar Tidak Bisa Di-Resize di Web & Mobile)
             Quill.register('modules/blotFormatter', QuillBlotFormatter.default);
 
+            // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+            // NEW: REGISTRASI ATTRIBUTOR LINE HEIGHT UNTUK MENGATUR SPASI BARIS
+            // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+            const Parchment = Quill.import('parchment');
+            class LineHeightAttributor extends Parchment.Attributor.Style {}
+            const LineHeightStyle = new LineHeightAttributor('lineHeight', 'line-height', {
+                scope: Parchment.Scope.BLOCK,
+                whitelist: ['1.0', '1.2', '1.5', '1.8', '2.0', '2.5', '3.0']
+            });
+            Quill.register(LineHeightStyle, true);
+
             // 4. Pembentukan Entitas Editor Tunggal
             quillEditor = new Quill('#editor-container', {
                 theme: 'snow',
@@ -1506,8 +1542,9 @@
                     }, 
                     toolbar: {
                         container: [
-                            // Blok Font dan Dimensi Presisi Tinggi
+                            // Blok Font, Dimensi Presisi Tinggi, dan Spasi Baris
                             [{ 'font': Font.whitelist }, { 'size': Size.whitelist }],
+                            [{ 'lineHeight': ['1.0', '1.2', '1.5', '1.8', '2.0', '2.5', '3.0'] }], // <-- Dropdown Line Spacing Baru
                             [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
                             
                             // Blok Tata Rupa Teks
@@ -2159,13 +2196,22 @@
         });
 
         // ====================================================================================
-        // GORONG-GORONG UTAMA EKSEKUSI PENYEBARAN MASSAL
+        // GORONG-GORONG UTAMA EKSEKUSI PENYEBARAN MASSAL DENGAN SIMULASI PROGRESS BAR
         // ====================================================================================
         async function executeBlast(e) {
             e.preventDefault();
             const btn = document.getElementById('blastBtn');
             const target = document.getElementById('targetAudience').value;
             const campaignName = document.getElementById('campaignName').value;
+            
+            // DOM Progress Bar Elements
+            const progressContainer = document.getElementById('blastProgressContainer');
+            const progressBar = document.getElementById('blastProgressBar');
+            const progressText = document.getElementById('blastProgressText');
+            const progressPercent = document.getElementById('blastProgressPercent');
+            
+            // Variabel penyimpan interval simulasi loading
+            let loadingInterval;
             
             // Mengekstraksi arsitektur mentah
             let messageHTML = quillEditor.root.innerHTML;
@@ -2193,9 +2239,39 @@
                 }
             }
 
-            // Kunci Katup Operasi (Loading State)
-            btn.innerHTML = `<svg class="svg-icon" style="animation: spin 1s linear infinite;" viewBox="0 0 24 24"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg> Merangkai Parameter Pembakaran...`; 
-            btn.disabled = true;
+            // Kunci Katup Operasi (Disable Button)
+            btn.style.display = 'none'; // Sembunyikan tombol agar pengguna fokus ke loading
+            
+            // =========================================================================
+            // INJEKSI LOGIKA PROGRESS BAR (ASYMPTOTIC LOADING)
+            // =========================================================================
+            progressContainer.style.display = 'block';
+            progressBar.style.width = '0%';
+            progressBar.style.background = 'linear-gradient(90deg, var(--status-success), #34D399)';
+            progressPercent.innerText = '0%';
+            
+            let simulatedProgress = 0;
+            progressText.innerHTML = '<svg class="svg-icon" style="animation: spin 1s linear infinite;" viewBox="0 0 24 24"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg> Menghitung kalkulasi target matriks...';
+            
+            loadingInterval = setInterval(() => {
+                // Algoritma Asymptotic: Berjalan cepat di awal, melambat menjelang 95%
+                if(simulatedProgress < 30) {
+                    simulatedProgress += Math.random() * 4;
+                    progressText.innerHTML = '<svg class="svg-icon" style="animation: spin 1s linear infinite;" viewBox="0 0 24 24"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg> Kompresi Biner dan Enkripsi Lampiran...';
+                } else if (simulatedProgress < 65) {
+                    simulatedProgress += Math.random() * 2;
+                    progressText.innerHTML = '<svg class="svg-icon" style="animation: spin 1s linear infinite;" viewBox="0 0 24 24"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg> Transmisi Payload ke Edge Server Resend...';
+                } else if (simulatedProgress < 95) {
+                    simulatedProgress += Math.random() * 0.4;
+                    progressText.innerHTML = '<svg class="svg-icon" style="animation: spin 1s linear infinite;" viewBox="0 0 24 24"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg> Menunggu Respon Resolusi Terakhir dari Cloud...';
+                }
+                
+                // Kunci maksimal di 95% sampai fetch API benar-benar selesai
+                if(simulatedProgress > 95) simulatedProgress = 95; 
+
+                progressBar.style.width = `${simulatedProgress}%`;
+                progressPercent.innerText = `${Math.floor(simulatedProgress)}%`;
+            }, 300); // Update setiap 300ms
 
             try {
                 // Menjemput Legalitas Hak Akses
@@ -2219,7 +2295,6 @@
                 let attachmentsArray = [];
                 
                 if (fileInput && fileInput.files.length > 0) {
-                    btn.innerHTML = `<svg class="svg-icon" style="animation: spin 1s linear infinite;" viewBox="0 0 24 24"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg> Memampatkan ${fileInput.files.length} Lampiran Biner Berat...`;
                     for (let i = 0; i < fileInput.files.length; i++) {
                         const file = fileInput.files[i];
                         
@@ -2238,8 +2313,6 @@
                     }
                 }
 
-                btn.innerHTML = `<svg class="svg-icon" style="animation: spin 1s linear infinite;" viewBox="0 0 24 24"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg> Misil Diudara: Bernegosiasi dengan Edge Server...`;
-
                 // --- TRANSISI DATA SAKRAL KE SUPABASE EDGE FUNCTIONS ---
                 // (Ini mensyaratkan Deno JS Cloudflare Function Anda tetap kokoh)
                 const { data, error } = await supabaseClient.functions.invoke('send-blast', {
@@ -2252,9 +2325,17 @@
                     }
                 });
 
+                // HENTIKAN PROGRESS BAR LOADING
+                clearInterval(loadingInterval);
+
                 if (error) throw new Error("Terjadi benturan dinding pelindung saat menembus Edge Cloudflare: " + error.message);
                 if (data && data.error) throw new Error("Terminal Pihak Ketiga (Resend API) Memveto: " + data.error);
 
+                // PENYELESAIAN LOADING 100% SUKSES
+                progressBar.style.width = '100%';
+                progressPercent.innerText = '100%';
+                progressText.innerHTML = '<svg class="svg-icon" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg> Transmisi Seluruh Matriks Sukses Dijalankan!';
+                
                 // --- AKUISISI SUKSES & PENCATATAN ARSIP KEKEKALAN DB ---
                 try {
                     await supabaseClient.from('blast_history').insert([{
@@ -2282,14 +2363,29 @@
                 quillEditor.root.innerHTML = ''; 
                 document.getElementById('imageUploadWarning').style.display = 'none';
                 
+                // Menutup bar loading dengan transisi mulus
+                setTimeout(() => {
+                    progressContainer.style.display = 'none';
+                    btn.style.display = 'inline-flex';
+                }, 3000);
+                
             } catch (err) { 
+                // PENYELESAIAN LOADING BILA ERROR (Berubah Merah)
+                clearInterval(loadingInterval);
+                progressBar.style.width = '100%';
+                progressBar.style.background = 'linear-gradient(90deg, var(--status-error), #F87171)';
+                progressText.innerHTML = '<svg class="svg-icon" viewBox="0 0 24 24"><path d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg> Eksekusi Ditolak Server!';
+                
                 console.error("Gagalnya Mesin Eksekusi Inti:", err);
                 showAlert(err.message, 'error'); 
-            } finally { 
-                // Dekompresi Kunci UI, Kembali Siap Tembak
-                btn.innerHTML = `<svg class="svg-icon" viewBox="0 0 24 24"><path d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg> Luncurkan Eksekusi Blasting Ulang`; 
-                btn.disabled = false; 
-            }
+                
+                // Menutup bar loading
+                setTimeout(() => {
+                    progressContainer.style.display = 'none';
+                    btn.style.display = 'inline-flex';
+                    btn.disabled = false;
+                }, 4000);
+            } 
         }
 
         // Protokol Pengakhiran Sesi Tingkat Tinggi
