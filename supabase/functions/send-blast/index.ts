@@ -12,7 +12,8 @@ serve(async (req) => {
   }
 
   try {
-    const { campaignName, targetAudience, messageHTML, settings, attachments } = await req.json()
+    // Menangkap explicitEmails dari sistem loading chunking frontend
+    const { campaignName, targetAudience, messageHTML, settings, attachments, explicitEmails } = await req.json()
 
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -20,18 +21,23 @@ serve(async (req) => {
     )
 
     let query = supabaseClient.from('contacts').select('name, email')
-    if (targetAudience !== 'all') {
+    
+    // [MODIFIKASI KUNCI 1]: Hanya mengambil data dari database sesuai "kloter" (chunk) saat ini
+    // Ini memastikan kita mendapatkan variabel ${contact.name} tanpa query 1.000 data sekaligus!
+    if (explicitEmails && Array.isArray(explicitEmails) && explicitEmails.length > 0) {
+      query = query.in('email', explicitEmails)
+    } else if (targetAudience !== 'all') {
       query = query.eq('category', targetAudience.toLowerCase())
     }
+    
     const { data: contacts, error: dbError } = await query
 
     if (dbError) throw dbError
     if (!contacts || contacts.length === 0) throw new Error("Tidak ada kontak di grup target.")
 
-    let sentCount = 0;
-
-    // Proses kirim satu per satu (Sekuensial)
-    for (const contact of contacts) {
+    // [MODIFIKASI KUNCI 2]: Menyusun Payload menggunakan pola Array untuk Resend BATCH API.
+    // Tidak ada lagi looping sekuensial yang menyebabkan Edge Function Timeout 546!
+    const batchPayload = contacts.map(contact => {
       const emailPayload: any = {
         from: `${settings.senderName} <${settings.senderEmail}>`,
         to: [contact.email],
@@ -56,34 +62,38 @@ serve(async (req) => {
         `
       };
 
-      // BYPASS TOTAL: Langsung tempel attachment dari frontend ke Resend
       if (attachments && attachments.length > 0) {
         emailPayload.attachments = attachments;
       }
 
-      const res = await fetch('https://api.resend.com/emails', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${settings.apiKey}`
-        },
-        body: JSON.stringify(emailPayload)
-      });
+      return emailPayload;
+    });
 
-      if (res.ok) sentCount++;
-      
-      // Jeda 200ms agar server tidak nge-hang
-      await new Promise(resolve => setTimeout(resolve, 200));
+    // Eksekusi SATU KALI tembakan paralel menggunakan Endpoint Batch Resend
+    const res = await fetch('https://api.resend.com/emails/batch', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${settings.apiKey}`
+      },
+      body: JSON.stringify(batchPayload)
+    });
+
+    const resData = await res.json();
+
+    if (!res.ok) {
+      throw new Error(resData.message || JSON.stringify(resData));
     }
 
-    if (sentCount === 0 && contacts.length > 0) throw new Error("Gagal mengirim email ke Resend.");
+    // Resend Batch API mengembalikan array data berisi ID email yang sukses antre
+    const sentCount = resData.data ? resData.data.length : contacts.length;
 
     return new Response(JSON.stringify({ success: true, count: sentCount }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
     })
 
-  } catch (error) {
+  } catch (error: any) {
     return new Response(JSON.stringify({ error: error.message }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 400,
