@@ -1232,7 +1232,11 @@
                             <h2>Pusat Visibilitas Operasional</h2>
                             <p style="margin-top: 8px; color: var(--text-muted);">Organisasikan struktur sirkulasi kontak antar grup secara interaktif.</p>
                         </div>
-                        <div style="display: flex; gap: 12px; background: var(--bg-canvas); padding: 4px; border-radius: var(--radius-md); border: 1px solid var(--border-light);">
+                        <div style="display: flex; gap: 12px; background: var(--bg-canvas); padding: 4px; border-radius: var(--radius-md); border: 1px solid var(--border-light); align-items: center;">
+                            <button class="btn btn-sm btn-outline" style="background: white; color: var(--text-muted); box-shadow: var(--shadow-sm); border: 1px solid var(--border-medium);" onclick="loadDatabaseContacts()">
+                                <svg class="svg-icon" viewBox="0 0 24 24"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg> Segarkan Data
+                            </button>
+                            <span style="width: 1px; height: 24px; background: var(--border-medium); margin: 0 4px;"></span>
                             <button class="btn btn-sm" style="background: var(--bg-surface); color: var(--ipb-primary); box-shadow: var(--shadow-sm);" onclick="toggleKanbanView(false)" id="btnViewTable">
                                 <svg class="svg-icon" viewBox="0 0 24 24"><path d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg> Tabel Matriks
                             </button>
@@ -1755,17 +1759,32 @@
             if(isKanban) renderKanbanBoard();
         }
 
-        // Pemuatan Utas Tunggal (Single Thread Fetch)
+        // Pemuatan Utas Tunggal (Single Thread Fetch) dengan Bypass Limit 10,000+
         async function loadDatabaseContacts() {
             const tbody = document.getElementById('tableBodyManage');
             tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding:40px;"><svg class="svg-icon" style="width:30px;height:30px; animation: spin 1s linear infinite;" viewBox="0 0 24 24"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg><br><br>Menunggu respons asinkron dari server...</td></tr>';
             
             try {
-                const { data, error } = await supabaseClient.from('contacts')
-                    .select('*')
-                    .order('created_at', { ascending: false });
+                // INJEKSI BYPASS LIMIT 1000 -> 10.000+ DATA (Pagination Tersembunyi)
+                let data = [];
+                let hasMore = true;
+                let step = 0;
+                
+                while(hasMore && step < 15) { // Maksimal 15.000 data agar browser aman
+                    const { data: chunk, error } = await supabaseClient.from('contacts')
+                        .select('*')
+                        .order('created_at', { ascending: false })
+                        .range(step * 1000, (step + 1) * 1000 - 1);
+                        
+                    if (error) throw error;
                     
-                if (error) throw error;
+                    if (chunk && chunk.length > 0) {
+                        data = data.concat(chunk);
+                        step++;
+                    } else {
+                        hasMore = false;
+                    }
+                }
                 
                 databaseContacts = data; 
                 
@@ -1997,12 +2016,28 @@
             } catch(e) { showAlert(e.message, 'error'); }
         }
 
-        // Sinkronisasi Pipa Select Option Lintas DOM
+        // Sinkronisasi Pipa Select Option Lintas DOM dengan Bypass Limit
         async function updateTargetDropdownFromDB() {
             try {
-                const { data, error } = await supabaseClient.from('contacts').select('category');
-                if(error) throw error;
-                if(!data) return;
+                let data = [];
+                let hasMore = true;
+                let step = 0;
+                
+                while(hasMore && step < 15) {
+                    const { data: chunk, error } = await supabaseClient.from('contacts')
+                        .select('category')
+                        .range(step * 1000, (step + 1) * 1000 - 1);
+                        
+                    if(error) throw error;
+                    if(chunk && chunk.length > 0) {
+                        data = data.concat(chunk);
+                        step++;
+                    } else {
+                        hasMore = false;
+                    }
+                }
+                
+                if(data.length === 0) return;
                 
                 // Menempa Array Murni Bebas Duplikat
                 const uniqueGroups = [...new Set(data.map(item => item.category))];
@@ -2031,12 +2066,25 @@
             tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding:40px;"><svg class="svg-icon" style="width:30px;height:30px; animation: spin 1s linear infinite;" viewBox="0 0 24 24"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg><br><br>Menelusuri relung server...</td></tr>';
             
             try {
-                // Membaca baris dari tabel audit
-                const { data, error } = await supabaseClient.from('blast_history')
-                    .select('*')
-                    .order('sent_at', { ascending: false });
-                    
-                if (error) throw error;
+                // INJEKSI BYPASS LIMIT 1000 UNTUK HISTORY
+                let data = [];
+                let hasMore = true;
+                let step = 0;
+                
+                while(hasMore && step < 5) { // 5.000 riwayat sudah sangat banyak
+                    const { data: chunk, error } = await supabaseClient.from('blast_history')
+                        .select('*')
+                        .order('sent_at', { ascending: false })
+                        .range(step * 1000, (step + 1) * 1000 - 1);
+                        
+                    if (error) throw error;
+                    if(chunk && chunk.length > 0) {
+                        data = data.concat(chunk);
+                        step++;
+                    } else {
+                        hasMore = false;
+                    }
+                }
                 
                 tbody.innerHTML = '';
                 if(data.length === 0) { 
@@ -2225,24 +2273,39 @@
             progressBar.style.width = '0%';
             progressBar.style.background = 'linear-gradient(90deg, var(--status-success), #34D399)';
             progressPercent.innerText = '0%';
-            progressText.innerHTML = '<svg class="svg-icon" style="animation: spin 1s linear infinite;" viewBox="0 0 24 24"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg> Mengumpulkan data target...';
+            progressText.innerHTML = '<svg class="svg-icon" style="animation: spin 1s linear infinite;" viewBox="0 0 24 24"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg> Mengumpulkan data target dari database...';
 
             try {
                 // Menjemput Legalitas Hak Akses
                 const { data: { session } } = await supabaseClient.auth.getSession();
                 if (!session) throw new Error("Akses Ilegal: Tiket Sesi Otentikasi Terbakar. Tolong lakukan relogin.");
 
-                // Memanen Seluruh Titik Koordinat Tujuan (Daftar Email)
-                let query = supabaseClient.from('contacts').select('email');
-                if(target !== 'all') {
-                    query = query.eq('category', target.toLowerCase());
+                // Memanen Seluruh Titik Koordinat Tujuan (Daftar Email) dengan Bypass Limit 10,000+
+                let targetedEmails = [];
+                let hasMore = true;
+                let step = 0;
+                
+                while(hasMore && step < 15) { // Tarik sampai 15.000 kontak
+                    let query = supabaseClient.from('contacts').select('email').range(step * 1000, (step + 1) * 1000 - 1);
+                    if(target !== 'all') {
+                        query = query.eq('category', target.toLowerCase());
+                    }
+                    const { data: chunk, error } = await query;
+                    if (error) throw error;
+                    
+                    if (chunk && chunk.length > 0) {
+                        targetedEmails = targetedEmails.concat(chunk.map(c => c.email));
+                        step++;
+                    } else {
+                        hasMore = false;
+                    }
                 }
-                const { data: contactList } = await query;
-                const targetedEmails = contactList ? contactList.map(c => c.email) : [];
                 
                 if (targetedEmails.length === 0) {
                     throw new Error(`Kalkulasi Batal: Sektor bidikan [${target.toUpperCase()}] rupanya tak berpenghuni.`);
                 }
+                
+                progressText.innerHTML = `<svg class="svg-icon" style="animation: spin 1s linear infinite;" viewBox="0 0 24 24"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg> Persiapan pengiriman ke ${targetedEmails.length} responden...`;
 
                 // Proses Mutasi Dokumen Fisik ke Pembawa Biner (Attachments)
                 const fileInput = document.getElementById('attachmentFiles');
@@ -2258,9 +2321,7 @@
                     }
                 }
 
-                // --- SISTEM CHUNKING BATCH TERSTRUKTUR ---
-                // Edge Functions & Resend API memiliki batasan ketat (Max 50 email/request & Timeout 5-10 detik)
-                // Kita pecah 280+ kontak menjadi kelompok berisi 40 kontak per tembakan.
+                // --- SISTEM CHUNKING BATCH TERSTRUKTUR (Animasi Progres Realtime) ---
                 const BATCH_SIZE = 40;
                 const totalBatches = Math.ceil(targetedEmails.length / BATCH_SIZE);
                 let totalSentSuccessfully = 0;
@@ -2270,34 +2331,32 @@
                     const endIdx = startIdx + BATCH_SIZE;
                     const emailBatch = targetedEmails.slice(startIdx, endIdx);
 
-                    // Update UI Asymptotic Progress Bar dengan angka nyata
-                    const currentProgress = Math.floor((i / totalBatches) * 100);
-                    progressBar.style.width = `${currentProgress}%`;
-                    progressPercent.innerText = `${currentProgress}%`;
-                    progressText.innerHTML = `<svg class="svg-icon" style="animation: spin 1s linear infinite;" viewBox="0 0 24 24"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg> Menembakkan Kloter ${i + 1} dari ${totalBatches} (${emailBatch.length} Responden)...`;
-
                     // Transmisi per batch ke Edge Server
                     const { data, error } = await supabaseClient.functions.invoke('send-blast', {
                         body: { 
                             campaignName: campaignName, 
-                            targetAudience: target, // Tetap dikirim untuk formalitas
-                            explicitEmails: emailBatch, // INJEKSI BARU: Mengirim array email secara eksplisit agar Edge tidak query ulang
+                            targetAudience: target, 
+                            explicitEmails: emailBatch, 
                             messageHTML: messageHTML, 
                             settings: settings, 
                             attachments: attachmentsArray 
                         }
                     });
 
-                    if (error) {
-                        throw new Error(`Benturan Cloudflare di Kloter ${i + 1}: ` + error.message);
-                    }
-                    if (data && data.error) {
-                        throw new Error(`Resend API menolak Kloter ${i + 1}: ` + data.error);
-                    }
+                    if (error) throw new Error(`Benturan Cloudflare di Kloter ${i + 1}: ` + error.message);
+                    if (data && data.error) throw new Error(`Resend API menolak Kloter ${i + 1}: ` + data.error);
 
-                    // Jeda 1.5 detik antar kloter untuk menghindari Rate Limit 429 Too Many Requests
-                    await new Promise(resolve => setTimeout(resolve, 1500));
+                    // Menghitung kemajuan mutlak (Real-time Progress Calculation)
                     totalSentSuccessfully += emailBatch.length;
+                    const currentProgress = Math.floor((totalSentSuccessfully / targetedEmails.length) * 100);
+                    
+                    // Memperbarui UI Bar secara Real-time dengan Angka Akurat
+                    progressBar.style.width = `${currentProgress}%`;
+                    progressPercent.innerText = `${currentProgress}%`;
+                    progressText.innerHTML = `<svg class="svg-icon" style="animation: spin 1s linear infinite;" viewBox="0 0 24 24"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg> Sedang Mentransmisi... (${totalSentSuccessfully} / ${targetedEmails.length} Surel Terkirim)`;
+
+                    // Jeda dingin antar kloter
+                    await new Promise(resolve => setTimeout(resolve, 1500));
                 }
 
                 // PENYELESAIAN LOADING 100% SUKSES
@@ -2314,6 +2373,9 @@
                         sent_by: session.user.id,
                         targeted_emails: targetedEmails 
                     }]);
+                    
+                    // PEMANGGILAN OTOMATIS: Merefresh Audit Log secara instan (Fitur Tambahan)
+                    loadBlastHistory();
                 } catch(historyErr) { 
                     console.warn("Pencatatan Audit Gagal Berjalan. Periksa Constraint JSONB Supabase Anda.", historyErr); 
                 }
