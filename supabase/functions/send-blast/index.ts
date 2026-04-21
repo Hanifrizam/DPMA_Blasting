@@ -42,6 +42,10 @@ serve(async (req) => {
         from: `${settings.senderName} <${settings.senderEmail}>`,
         to: [contact.email],
         subject: campaignName,
+        // =========================================================================
+        // INJEKSI BARU: Memberikan Label Kampanye (Tags) agar bisa dilacak Webhook
+        // =========================================================================
+        tags: [{ name: 'campaign', value: campaignName }],
         html: `
           <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 650px; margin: 0 auto; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.05);">
             <div style="background-color: #003366; padding: 25px; text-align: center; border-bottom: 5px solid #fec315;">

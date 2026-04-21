@@ -682,6 +682,7 @@
         .badge-success { background: var(--status-success-bg); color: #065F46; border: 1px solid rgba(16, 185, 129, 0.2); }
         .badge-error { background: var(--status-error-bg); color: #991B1B; border: 1px solid rgba(239, 68, 68, 0.2); }
         .badge-warning { background: var(--status-warning-bg); color: #92400E; }
+        .badge-info { background: #DBEAFE; color: #1E3A8A; border: 1px solid rgba(59, 130, 246, 0.2); }
 
         /* ==========================================================================
            10. SISTEM TABS DINAMIS
@@ -934,7 +935,7 @@
             <div class="modal-header">
                 <h3>
                     <svg class="svg-icon svg-icon-lg" viewBox="0 0 24 24"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
-                    Audit Log Eksekusi
+                    Audit Log Eksekusi & Interaksi
                 </h3>
                 <button class="close-modal" onclick="closeModal('historyDetailModal')">
                     <svg class="svg-icon" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"/></svg>
@@ -951,26 +952,24 @@
                     </div>
                     <div class="stat-card" style="padding: 20px; flex: 1; min-width: 140px; box-shadow: var(--shadow-sm);">
                         <h4 style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 10px; display:flex; align-items:center; gap:8px;">
-                            <span class="stat-icon-wrapper icon-green" style="width:24px; height:24px; margin:0;"><svg class="svg-icon" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></span>
-                            Terkirim Sukses
+                            <span class="stat-icon-wrapper icon-green" style="width:24px; height:24px; margin:0;"><svg class="svg-icon" viewBox="0 0 24 24"><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg></span>
+                            Berhasil Dibaca
                         </h4>
                         <div style="font-size: 2rem; font-weight: 800; color: var(--status-success);" id="hd-success">0</div>
                     </div>
-                    <div class="stat-card" style="padding: 20px; flex: 1; min-width: 140px; box-shadow: var(--shadow-sm); border-color: rgba(239, 68, 68, 0.2);">
+                    <div class="stat-card" style="padding: 20px; flex: 1; min-width: 140px; box-shadow: var(--shadow-sm);">
                         <h4 style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 10px; display:flex; align-items:center; gap:8px;">
-                            <span class="stat-icon-wrapper" style="background:var(--status-error-bg); color:var(--status-error); width:24px; height:24px; margin:0;"><svg class="svg-icon" viewBox="0 0 24 24"><path d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></span>
-                            Gagal (Bounced)*
+                            <span class="stat-icon-wrapper icon-yellow" style="width:24px; height:24px; margin:0;"><svg class="svg-icon" viewBox="0 0 24 24"><path d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122"/></svg></span>
+                            Link Diklik
                         </h4>
-                        <div style="font-size: 2rem; font-weight: 800; color: var(--status-error);" id="hd-bounced">0</div>
+                        <div style="font-size: 2rem; font-weight: 800; color: var(--ipb-accent);" id="hd-clicked">0</div>
                     </div>
                 </div>
-                <div style="background: var(--status-warning-bg); border-left: 4px solid var(--status-warning); padding: 12px 16px; border-radius: 4px; margin-bottom: 20px;">
-                    <p style="font-size: 0.85rem; color: #92400E; margin: 0; display:flex; gap:8px; align-items:flex-start;">
-                        <svg class="svg-icon" style="flex-shrink:0; margin-top:2px;" viewBox="0 0 24 24"><path d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                        <span><strong>Catatan Integrasi:</strong> Pengecekan status <em>Bounced</em> aktual (email tertolak oleh server penerima) mengharuskan Anda memasang <em>Webhook URL</em> dari Supabase Edge Function ke sistem Dashboard Resend API. Tanpa itu, metrik kegagalan akan selalu 0.</span>
-                    </p>
-                </div>
-                <h4 style="margin-bottom: 15px; color: var(--ipb-primary); font-family: 'Plus Jakarta Sans', sans-serif;">Daftar Tujuan Distribusi:</h4>
+                
+                <h4 style="margin-bottom: 15px; color: var(--ipb-primary); font-family: 'Plus Jakarta Sans', sans-serif; display:flex; align-items:center; gap:8px;">
+                    Daftar Tujuan & Status Terkini:
+                    <span style="font-size:0.8rem; font-weight:normal; color:var(--text-muted);">(Otomatis tersinkron dengan Resend Webhook)</span>
+                </h4>
                 <ul class="tracking-list" id="trackingListContent"></ul>
             </div>
         </div>
@@ -1294,7 +1293,7 @@
             <div class="content-panel">
                 <div class="panel-header">
                     <h2>
-                        <svg class="svg-icon svg-icon-lg" style="color:var(--status-info);" viewBox="0 0 24 24"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+                        <svg class="svg-icon svg-icon-lg" style="color:var(--status-info);" viewBox="0 0 24 24"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
                         Inspektorat Jejak Pengiriman
                     </h2>
                     <button class="btn btn-outline btn-sm" onclick="loadBlastHistory()">
@@ -2126,7 +2125,7 @@
                             <button class="btn btn-sm btn-outline" onclick='openEmailPreview(window["${htmlId}"])' title="Inspeksi Kanvas HTML Asli">
                                 <svg class="svg-icon" viewBox="0 0 24 24"><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg> Render
                             </button>
-                            <button class="btn btn-sm btn-accent" onclick="showHistoryDetail('${safeTargets}')" title="Ekstraksi Laporan Metrik Pengiriman">
+                            <button class="btn btn-sm btn-accent" onclick="showHistoryDetail('${safeTargets}', '${history.campaign_name.replace(/'/g, "\\'")}')" title="Ekstraksi Laporan Metrik Pengiriman">
                                 <svg class="svg-icon" viewBox="0 0 24 24"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg> Metrik
                             </button>
                         </td>
@@ -2144,44 +2143,90 @@
             openModal('previewModal');
         }
 
-        // Pembedah dan Pembaca Laporan Angka Detil (Fix Bug 0 Data)
-        function showHistoryDetail(encodedTargets) {
+        // Pembedah dan Pembaca Laporan Angka Detil (INTEGRASI WEBHOOK RESEND)
+        async function showHistoryDetail(encodedTargets, campaignName) {
             let emails = [];
             try { 
-                // Dekode lapis demi lapis yang diracik sebelumnya
                 const stringifiedArray = decodeURIComponent(encodedTargets);
                 emails = JSON.parse(stringifiedArray); 
             } catch(e) {
                 console.error("Gagalnya Dekripsi Array Target Sasaran", e);
             }
             
-            // Kalkulasi Kepastian (Sekarang tidak akan 0 lagi jika ada datanya)
             const total = emails.length;
-            
             document.getElementById('hd-total').innerText = total;
-            document.getElementById('hd-success').innerText = total; 
-            document.getElementById('hd-bounced').innerText = "0"; 
+            document.getElementById('hd-success').innerHTML = `<svg class="svg-icon" style="animation: spin 1s linear infinite;" viewBox="0 0 24 24"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg> Memuat...`; 
+            document.getElementById('hd-clicked').innerHTML = `<svg class="svg-icon" style="animation: spin 1s linear infinite;" viewBox="0 0 24 24"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg> Memuat...`; 
+            document.getElementById('hd-bounced').innerHTML = `<svg class="svg-icon" style="animation: spin 1s linear infinite;" viewBox="0 0 24 24"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg> Memuat...`; 
             
             const ul = document.getElementById('trackingListContent');
-            ul.innerHTML = '';
-            
-            if(total === 0) {
-                ul.innerHTML = '<li class="tracking-item" style="justify-content:center; color:var(--status-warning); background:var(--status-warning-bg);">Jejak Destinasi Menguap: Data Array Kontak untuk Baris Peristiwa Ini Tidak Tersedia.</li>';
-            } else {
-                emails.forEach(email => {
-                    ul.innerHTML += `
-                        <li class="tracking-item">
-                            <span style="font-weight: 600; color: var(--ipb-primary); font-family:'Inter', monospace;">
-                                <svg class="svg-icon" style="width:16px;height:16px;margin-right:8px;color:var(--text-muted);" viewBox="0 0 24 24"><path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
-                                ${email}
-                            </span>
-                            <span class="badge badge-success"><svg class="svg-icon" style="width:12px;height:12px;margin-right:4px;" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg> Terinjeksi</span>
-                        </li>
-                    `;
-                });
-            }
-            
+            ul.innerHTML = '<li class="tracking-item" style="justify-content:center;"><svg class="svg-icon" style="animation: spin 1s linear infinite;" viewBox="0 0 24 24"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg> Sinkronisasi dengan Resend API Webhook...</li>';
             openModal('historyDetailModal');
+
+            try {
+                // Menarik Data dari Tabel Baru email_events yang diisi oleh Webhook
+                const { data: events, error } = await supabaseClient
+                    .from('email_events')
+                    .select('*')
+                    .eq('campaign_name', campaignName);
+
+                // Variabel Penghitung Status
+                let openedCount = 0;
+                let clickedCount = 0;
+                let bouncedCount = 0;
+                
+                ul.innerHTML = '';
+                
+                if(total === 0) {
+                    ul.innerHTML = '<li class="tracking-item" style="justify-content:center; color:var(--status-warning); background:var(--status-warning-bg);">Jejak Destinasi Menguap: Data Array Kontak untuk Baris Peristiwa Ini Tidak Tersedia.</li>';
+                } else {
+                    emails.forEach(email => {
+                        // Mencari rekam jejak email spesifik ini di tabel webhook
+                        const myEvents = events ? events.filter(e => e.email === email) : [];
+                        
+                        const isOpened = myEvents.some(e => e.event_type === 'email.opened');
+                        const isClicked = myEvents.some(e => e.event_type === 'email.clicked');
+                        const isBounced = myEvents.some(e => e.event_type === 'email.bounced');
+
+                        if (isOpened) openedCount++;
+                        if (isClicked) clickedCount++;
+                        if (isBounced) bouncedCount++;
+
+                        // Memutuskan Badge Mana yang Muncul
+                        let statusBadge = `<span class="badge badge-blue" style="opacity:0.7;"><svg class="svg-icon" style="width:12px;height:12px;margin-right:4px;" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg> Terkirim (Belum Dibaca)</span>`;
+                        
+                        if (isBounced) {
+                            statusBadge = `<span class="badge badge-error"><svg class="svg-icon" style="width:12px;height:12px;margin-right:4px;" viewBox="0 0 24 24"><path d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg> Bounced (Tertolak Server)</span>`;
+                        } else if (isClicked) {
+                            statusBadge = `<span class="badge" style="background-color: var(--ipb-accent); color: var(--ipb-primary);"><svg class="svg-icon" style="width:12px;height:12px;margin-right:4px;" viewBox="0 0 24 24"><path d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122"/></svg> Link Diklik</span>`;
+                        } else if (isOpened) {
+                            statusBadge = `<span class="badge badge-success"><svg class="svg-icon" style="width:12px;height:12px;margin-right:4px;" viewBox="0 0 24 24"><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg> Dibaca</span>`;
+                        }
+
+                        ul.innerHTML += `
+                            <li class="tracking-item">
+                                <span style="font-weight: 600; color: var(--ipb-primary); font-family:'Inter', monospace;">
+                                    <svg class="svg-icon" style="width:16px;height:16px;margin-right:8px;color:var(--text-muted);" viewBox="0 0 24 24"><path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+                                    ${email}
+                                </span>
+                                ${statusBadge}
+                            </li>
+                        `;
+                    });
+                }
+                
+                // Set Hasil Akhir Metriks
+                document.getElementById('hd-success').innerText = openedCount;
+                document.getElementById('hd-clicked').innerText = clickedCount;
+                document.getElementById('hd-bounced').innerText = bouncedCount;
+
+            } catch (err) {
+                console.error(err);
+                ul.innerHTML = `<li class="tracking-item" style="color:var(--status-error);">Gagal menyinkronkan data dengan Webhook: ${err.message}</li>`;
+                document.getElementById('hd-success').innerText = "Error";
+                document.getElementById('hd-clicked').innerText = "Error";
+                document.getElementById('hd-bounced').innerText = "Error";
+            }
         }
 
 
