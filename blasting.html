@@ -1191,7 +1191,7 @@
                         Injeksi Excel Massal
                     </button>
                     <button class="tab-btn active" onclick="switchTab('manageTab', this); loadDatabaseContacts();">
-                        <svg class="svg-icon" viewBox="0 0 24 24"><path d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"/></svg>
+                        <svg class="svg-icon" viewBox="0 0 24 24"><path d="M9 17V7m0 10a2 2 0 01-2-2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"/></svg>
                         Kelola Database Interaktif
                     </button>
                 </div>
@@ -2117,6 +2117,12 @@
                     // Meracik injeksi pelarian karakter untuk fungsi onclick (URL Encoding)
                     const safeTargets = encodeURIComponent(JSON.stringify(targetsArray));
                     
+                    // ==================================================================
+                    // PENYELESAIAN BUG NULL KETIKA MENGKLIK METRIK DI HISTORY LAMA
+                    // ==================================================================
+                    const cmpName = history.campaign_name || 'Kampanye Lama';
+                    const safeCampaignName = cmpName.replace(/'/g, "\\'").replace(/"/g, "&quot;");
+
                     // Menyandikan HTML Base64 atau membuang karakter berbahaya agar HTML tidak pecah
                     // Menggunakan teknik penyimpanan global sementara
                     const htmlId = `html_${Math.random().toString(36).substr(2, 9)}`;
@@ -2125,14 +2131,14 @@
                     const tr = document.createElement('tr');
                     tr.innerHTML = `
                         <td style="font-size:0.9rem; color:var(--text-muted);">${fmtDate}</td>
-                        <td style="font-weight: 700; color: var(--ipb-primary);">${history.campaign_name}</td>
+                        <td style="font-weight: 700; color: var(--ipb-primary);">${cmpName}</td>
                         <td style="text-transform: capitalize;"><span class="badge badge-warning">${history.target_audience}</span></td>
                         <td style="text-align: center;"><span class="badge badge-success" style="font-size:0.75rem;"><svg class="svg-icon" style="width:14px;height:14px;margin-right:2px;" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg> Tercatat</span></td>
                         <td style="text-align: center; display:flex; gap:8px; justify-content:center;">
                             <button class="btn btn-sm btn-outline" onclick='openEmailPreview(window["${htmlId}"])' title="Inspeksi Kanvas HTML Asli">
                                 <svg class="svg-icon" viewBox="0 0 24 24"><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg> Render
                             </button>
-                            <button class="btn btn-sm btn-accent" onclick="showHistoryDetail('${safeTargets}', '${history.campaign_name.replace(/'/g, "\\'")}')" title="Ekstraksi Laporan Metrik Pengiriman">
+                            <button class="btn btn-sm btn-accent" onclick="showHistoryDetail('${safeTargets}', '${safeCampaignName}')" title="Ekstraksi Laporan Metrik Pengiriman">
                                 <svg class="svg-icon" viewBox="0 0 24 24"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg> Metrik
                             </button>
                         </td>
@@ -2154,13 +2160,16 @@
         async function showHistoryDetail(encodedTargets, campaignName) {
             let emails = [];
             try { 
+                // Dekode lapis demi lapis yang diracik sebelumnya
                 const stringifiedArray = decodeURIComponent(encodedTargets);
                 emails = JSON.parse(stringifiedArray); 
             } catch(e) {
                 console.error("Gagalnya Dekripsi Array Target Sasaran", e);
             }
             
+            // Kalkulasi Kepastian (Sekarang tidak akan 0 lagi jika ada datanya)
             const total = emails.length;
+            
             document.getElementById('hd-total').innerText = total;
             document.getElementById('hd-success').innerHTML = `<svg class="svg-icon" style="animation: spin 1s linear infinite;" viewBox="0 0 24 24"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg> Memuat...`; 
             document.getElementById('hd-clicked').innerHTML = `<svg class="svg-icon" style="animation: spin 1s linear infinite;" viewBox="0 0 24 24"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg> Memuat...`; 
