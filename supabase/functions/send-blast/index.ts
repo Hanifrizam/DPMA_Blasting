@@ -7,12 +7,13 @@ const corsHeaders = {
 }
 
 serve(async (req) => {
+  // Handler untuk pre-flight request CORS
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
 
   try {
-    // Menangkap explicitEmails dari sistem loading chunking frontend
+    // Menangkap payload dari frontend termasuk explicitEmails (sistem kloter)
     const { campaignName, targetAudience, messageHTML, settings, attachments, explicitEmails } = await req.json()
 
     const supabaseClient = createClient(
@@ -20,10 +21,10 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
+    // Inisialisasi Query untuk mendapatkan nama responden
     let query = supabaseClient.from('contacts').select('name, email')
     
-    // [MODIFIKASI KUNCI 1]: Hanya mengambil data dari database sesuai "kloter" (chunk) saat ini
-    // Ini memastikan kita mendapatkan variabel ${contact.name} tanpa query 1.000 data sekaligus!
+    // [LOGIKA CHUNKING]: Jika frontend mengirim daftar email spesifik, gunakan itu
     if (explicitEmails && Array.isArray(explicitEmails) && explicitEmails.length > 0) {
       query = query.in('email', explicitEmails)
     } else if (targetAudience !== 'all') {
@@ -35,16 +36,14 @@ serve(async (req) => {
     if (dbError) throw dbError
     if (!contacts || contacts.length === 0) throw new Error("Tidak ada kontak di grup target.")
 
-    // [MODIFIKASI KUNCI 2]: Menyusun Payload menggunakan pola Array untuk Resend BATCH API.
-    // Tidak ada lagi looping sekuensial yang menyebabkan Edge Function Timeout 546!
+    // [MODIFIKASI KUNCI]: Menyusun Array untuk Resend BATCH API
+    // Kita mempertahankan template HTML LP2AI kebanggaan kamu
     const batchPayload = contacts.map(contact => {
       const emailPayload: any = {
         from: `${settings.senderName} <${settings.senderEmail}>`,
         to: [contact.email],
         subject: campaignName,
-        // =========================================================================
-        // INJEKSI BARU: Memberikan Label Kampanye (Tags) agar bisa dilacak Webhook
-        // =========================================================================
+        // INJEKSI TRACKING: Memberikan label agar laporan dibuka/diklik bisa masuk ke tabel email_events
         tags: [{ name: 'campaign', value: campaignName }],
         html: `
           <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 650px; margin: 0 auto; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.05);">
@@ -66,6 +65,7 @@ serve(async (req) => {
         `
       };
 
+      // Menambahkan lampiran jika ada
       if (attachments && attachments.length > 0) {
         emailPayload.attachments = attachments;
       }
@@ -73,7 +73,8 @@ serve(async (req) => {
       return emailPayload;
     });
 
-    // Eksekusi SATU KALI tembakan paralel menggunakan Endpoint Batch Resend
+    // Eksekusi SATU KALI tembakan paralel menggunakan Endpoint Batch Resend (Maks 100 email/kloter)
+    // Cara ini sangat aman dari error 546 karena prosesnya sangat cepat
     const res = await fetch('https://api.resend.com/emails/batch', {
       method: 'POST',
       headers: {
@@ -89,15 +90,16 @@ serve(async (req) => {
       throw new Error(resData.message || JSON.stringify(resData));
     }
 
-    // Resend Batch API mengembalikan array data berisi ID email yang sukses antre
+    // Menghitung jumlah yang berhasil masuk antrian Resend
     const sentCount = resData.data ? resData.data.length : contacts.length;
 
-    return new Response(JSON.stringify({ success: true, count: sentCount }), {
+    return new Response(JSON.stringify({ success: true, count: sentCount, data: resData }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
     })
 
   } catch (error: any) {
+    console.error("Critical Error in send-blast function:", error.message);
     return new Response(JSON.stringify({ error: error.message }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 400,
